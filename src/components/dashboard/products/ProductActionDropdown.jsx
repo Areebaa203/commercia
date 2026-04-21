@@ -21,11 +21,20 @@ const ProductActionDropdown = ({ isOpen, onClose, anchorRef, product, onView, on
         const rect = anchorRef.current.getBoundingClientRect();
         const dropdownHeight = dropdownRef.current.offsetHeight;
         const windowHeight = window.innerHeight;
+        const windowWidth = window.innerWidth;
         
         if (rect.bottom + dropdownHeight + 50 > windowHeight) {
-            setPosition({ bottom: "100%", right: 40, marginBottom: "-24px", transformOrigin: "bottom right" });
+            setPosition({ 
+              bottom: windowHeight - rect.top + 5, 
+              right: windowWidth - rect.right, 
+              transformOrigin: "bottom right" 
+            });
         } else {
-            setPosition({ top: "100%", right: 40, marginTop: "-24px", transformOrigin: "top right" });
+            setPosition({ 
+              top: rect.bottom + 5, 
+              right: windowWidth - rect.right, 
+              transformOrigin: "top right" 
+            });
         }
     }
   }, [isOpen, anchorRef]);
@@ -54,7 +63,7 @@ const ProductActionDropdown = ({ isOpen, onClose, anchorRef, product, onView, on
     <div
       ref={dropdownRef}
       className={clsx(
-        "absolute w-48 z-50 rounded-xl bg-white shadow-lg ring-1 ring-gray-100 transition-all duration-200",
+        "fixed w-48 z-50 rounded-xl bg-white shadow-lg ring-1 ring-gray-100 transition-all duration-200",
         isOpen
           ? "opacity-100 scale-100"
           : "opacity-0 scale-95 pointer-events-none"

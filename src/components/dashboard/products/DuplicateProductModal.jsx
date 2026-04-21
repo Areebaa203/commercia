@@ -3,10 +3,24 @@ import React, { useEffect, useState } from "react";
 import { Icon } from "@iconify/react";
 import { clsx } from "clsx";
 import axios from "axios";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { stringifyProductImages, parseProductImages } from "@/lib/product-images";
+
+const DEFAULT_PRODUCT_IMAGE =
+  "https://images.unsplash.com/photo-1553062407-98eeb94c6a62?q=80&w=200&auto=format&fit=crop";
 
 const DuplicateProductModal = ({ isOpen, onClose, product, onSuccess }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errorDialog, setErrorDialog] = useState({ open: false, message: "" });
 
   useEffect(() => {
     if (isOpen) {
@@ -20,13 +34,19 @@ const DuplicateProductModal = ({ isOpen, onClose, product, onSuccess }) => {
   const handleDuplicate = async () => {
     setLoading(true);
     try {
+      const imgs = parseProductImages(product.image_url || "");
+      const dupImages =
+        imgs.length > 0
+          ? imgs.map(({ url }) => ({ url, publicId: null }))
+          : [{ url: DEFAULT_PRODUCT_IMAGE, publicId: null }];
+
       await axios.post("/api/products/add", {
         name: `${product.name} (Copy)`,
         category: product.category || "",
         status: "draft",
-        price: product.price,
-        stock: product.stock,
-        image_url: product.image_url || undefined,
+        price: String(product.price ?? ""),
+        stock: String(product.stock ?? ""),
+        image_url: stringifyProductImages(dupImages),
       });
 
       onSuccess?.();
@@ -39,7 +59,7 @@ const DuplicateProductModal = ({ isOpen, onClose, product, onSuccess }) => {
         error.message ||
         "Failed to duplicate product.";
       console.error("Error duplicating product:", msg);
-      alert("Failed to duplicate product: " + msg);
+      setErrorDialog({ open: true, message: "Failed to duplicate product: " + msg });
     } finally {
       setLoading(false);
     }
@@ -50,7 +70,7 @@ const DuplicateProductModal = ({ isOpen, onClose, product, onSuccess }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
       {/* Backdrop */}
-      <div 
+      <div
         className={clsx(
           "absolute inset-0 bg-gray-900/30 backdrop-blur-sm transition-opacity duration-300",
           isOpen ? "opacity-100" : "opacity-0"
@@ -59,40 +79,57 @@ const DuplicateProductModal = ({ isOpen, onClose, product, onSuccess }) => {
       />
 
       {/* Modal Content */}
-      <div 
+      <div
         className={clsx(
           "relative w-full max-w-sm transform rounded-2xl bg-white p-6 shadow-xl transition-all duration-300",
           isOpen ? "scale-100 opacity-100 translate-y-0" : "scale-95 opacity-0 translate-y-4"
         )}
       >
         <div className="flex flex-col items-center text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-600 mb-4">
-                <Icon icon="mingcute:copy-2-line" width="24" />
-            </div>
-            <h3 className="text-lg font-bold text-gray-900">Duplicate Product?</h3>
-            <p className="mt-2 text-sm text-gray-500">
-                Are you sure you want to duplicate <span className="font-semibold text-gray-900">{product?.name}</span>? This will create a copy with "(Copy)" appended to the name.
-            </p>
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-600 mb-4">
+            <Icon icon="mingcute:copy-2-line" width="24" />
+          </div>
+          <h3 className="text-lg font-bold text-gray-900">Duplicate Product?</h3>
+          <p className="mt-2 text-sm text-gray-500">
+            Are you sure you want to duplicate <span className="font-semibold text-gray-900">{product?.name}</span>? This will create a copy with "(Copy)" appended to the name.
+          </p>
 
-            <div className="mt-6 flex w-full gap-3">
-                <button 
-                    disabled={loading}
-                    onClick={onClose}
-                    className="flex-1 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
-                >
-                    Cancel
-                </button>
-                <button 
-                    disabled={loading}
-                    className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-50"
-                    onClick={handleDuplicate}
-                >
-                    {loading && <Icon icon="mingcute:loading-fill" className="animate-spin" />}
-                    Duplicate
-                </button>
-            </div>
+          <div className="mt-6 flex w-full gap-3">
+            <button
+              disabled={loading}
+              onClick={onClose}
+              className="flex-1 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              disabled={loading}
+              className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors shadow-sm inline-flex items-center justify-center gap-2 disabled:opacity-50"
+              onClick={handleDuplicate}
+            >
+              {loading ? (
+                <>
+                  <Icon icon="mingcute:loading-fill" className="animate-spin shrink-0" width="18" />
+                  Duplicating…
+                </>
+              ) : (
+                "Duplicate"
+              )}
+            </button>
+          </div>
         </div>
       </div>
+      <AlertDialog open={errorDialog.open} onOpenChange={(open) => setErrorDialog(prev => ({ ...prev, open }))}>
+        <AlertDialogContent className="z-[60]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Error</AlertDialogTitle>
+            <AlertDialogDescription>{errorDialog.message}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setErrorDialog({ open: false, message: "" })}>OK</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

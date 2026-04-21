@@ -9,6 +9,8 @@ export const metadata = {
   description: "Modern E-commerce Dashboard",
 };
 
+import { Toaster } from "@/components/ui/toaster";
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={cn("font-sans", geist.variable)}>
@@ -16,6 +18,7 @@ export default function RootLayout({ children }) {
         className={`antialiased`}
       >
         {children}
+        <Toaster />
       </body>
     </html>
   );

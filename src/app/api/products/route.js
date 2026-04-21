@@ -13,7 +13,8 @@ function applyProductFilters(query, { q, status, category, stockStatus, priceRan
   }
 
   if (status !== "All") {
-    nextQuery = nextQuery.eq("status", status.toLowerCase());
+    const normalizedStatus = status === "Archive" ? "archived" : status.toLowerCase();
+    nextQuery = nextQuery.eq("status", normalizedStatus);
   }
 
   if (category !== "All") {
@@ -71,6 +72,7 @@ export async function GET(request) {
 
     const { data: products, count: totalCount, error: productsError } = await productQuery
       .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
       .range(from, to);
 
     if (productsError) {

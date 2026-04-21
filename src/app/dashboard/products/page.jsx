@@ -3,12 +3,20 @@ import { useEffect, useCallback, useState, useRef } from "react";
 import { Icon } from "@iconify/react";
 import { clsx } from "clsx";
 import ProductFilterDropdown from "@/components/dashboard/products/ProductFilterDropdown";
-import ProductActionDropdown from "@/components/dashboard/products/ProductActionDropdown";
 import ViewProductModal from "@/components/dashboard/products/ViewProductModal";
 import EditProductModal from "@/components/dashboard/products/EditProductModal";
 import DuplicateProductModal from "@/components/dashboard/products/DuplicateProductModal";
 import DeleteProductModal from "@/components/dashboard/products/DeleteProductModal";
 import AddProductModal from "@/components/dashboard/products/AddProductModal";
+import { getPrimaryProductImageUrl } from "@/lib/product-images";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function ProductsPage() {
   const [products, setProducts] = useState([]);
@@ -19,7 +27,6 @@ export default function ProductsPage() {
   const [selectedStatus, setSelectedStatus] = useState("All");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
-  const [openActionId, setOpenActionId] = useState(null);
   const [filters, setFilters] = useState({ category: "All", stockStatus: "All", priceRange: "All" });
 
   // Pagination State
@@ -112,16 +119,37 @@ export default function ProductsPage() {
     return "text-green-600 bg-green-50";
   };
 
-  const getStatusBadge = (status, stock) => {
+  const getStatusBadge = (status) => {
+    switch (status?.toLowerCase()) {
+      case "active":
+        return "bg-green-100 text-green-700 ring-green-600/20";
+      case "draft":
+        return "bg-gray-100 text-gray-700 ring-gray-600/20";
+      case "archived":
+      case "archive":
+        return "bg-red-100 text-red-700 ring-red-600/20";
+      default:
+        return "bg-gray-100 text-gray-700 ring-gray-600/20";
+    }
+  };
+
+  const getStockBadge = (stock) => {
     if (stock === 0) return "bg-red-100 text-red-700 ring-red-600/20";
     if (stock < 10) return "bg-yellow-100 text-yellow-700 ring-yellow-600/20";
+    return "bg-green-100 text-green-700 ring-green-600/20";
+  };
 
-    switch (status?.toLowerCase()) {
-      case "active": return "bg-green-100 text-green-700 ring-green-600/20";
-      case "draft": return "bg-gray-100 text-gray-700 ring-gray-600/20";
-      case "archived": return "bg-red-100 text-red-700 ring-red-600/20";
-      default: return "bg-gray-100 text-gray-700 ring-gray-600/20";
-    }
+  const getStatusLabel = (status) => {
+    const normalizedStatus = status?.toLowerCase();
+    if (normalizedStatus === "archived") return "Archive";
+    if (!normalizedStatus) return "Draft";
+    return normalizedStatus.charAt(0).toUpperCase() + normalizedStatus.slice(1);
+  };
+
+  const getStockLabel = (stock) => {
+    if (stock === 0) return "Out of Stock";
+    if (stock < 10) return "Low Stock";
+    return "In Stock";
   };
 
   const formatPrice = (price) => {
@@ -181,13 +209,13 @@ export default function ProductsPage() {
       </div>
 
       {/* Products Table Section */}
-      <div className="rounded-xl bg-white shadow-sm ring-1 ring-gray-100 overflow-hidden">
+      <div className="rounded-xl bg-white shadow-sm ring-1 ring-gray-100">
         {/* Filters */}
         <div className="border-b border-gray-100 p-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             {/* Tabs */}
             <div className="flex items-center gap-1 overflow-x-auto no-scrollbar bg-gray-50/50 p-1 rounded-lg border border-gray-100 w-fit">
-              {["All", "Active", "Draft", "Archived"].map((tab) => (
+              {["All", "Active", "Draft", "Archive"].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => {
@@ -209,29 +237,20 @@ export default function ProductsPage() {
               <div className="relative flex-1 sm:w-64">
                 <Icon icon="mingcute:search-line" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" width="18" />
                 <input
-                  type="text"
+                  type="search"
                   placeholder="Search products..."
                   value={searchQuery}
                   onChange={(e) => {
                     setSearchQuery(e.target.value);
                     setCurrentPage(1);
-                  }}
-                  className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-9 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => {
+                    // Native × clears the value → also reset debounce immediately
+                    if (!e.target.value) {
                       if (debounceRef.current) clearTimeout(debounceRef.current);
-                      setSearchQuery("");
                       setDebouncedSearch("");
-                      setCurrentPage(1);
-                    }}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center justify-center rounded-full p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
-                    aria-label="Clear search"
-                  >
-                    <Icon icon="mingcute:close-line" width="15" />
-                  </button>
-                )}
+                    }
+                  }}
+                  className="search-input w-full rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-4 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
+                />
               </div>
               <div className="relative" ref={filterBtnRef}>
                 <button
@@ -276,14 +295,26 @@ export default function ProductsPage() {
             </thead>
             <tbody className="divide-y divide-gray-100 border-t border-gray-100">
               {loading ? (
-                <tr>
-                  <td colSpan="7" className="px-6 py-10 text-center">
-                    <div className="flex flex-col items-center gap-2">
-                      <Icon icon="mingcute:loading-fill" className="animate-spin text-blue-500" width="24" />
-                      <span className="text-gray-400">Loading products...</span>
-                    </div>
-                  </td>
-                </tr>
+                Array.from({ length: 5 }).map((_, idx) => (
+                  <tr key={idx} className="border-t border-gray-100 animate-pulse">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="h-4 w-4 rounded" />
+                        <Skeleton className="h-10 w-10 shrink-0 rounded-lg" />
+                        <div className="space-y-2 w-full max-w-[150px]">
+                          <Skeleton className="h-4 w-full" />
+                          <Skeleton className="h-3 w-2/3" />
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4"><Skeleton className="h-4 w-24" /></td>
+                    <td className="px-6 py-4"><Skeleton className="h-6 w-16 rounded-full" /></td>
+                    <td className="px-6 py-4"><Skeleton className="h-4 w-16 ml-auto" /></td>
+                    <td className="px-6 py-4"><Skeleton className="h-4 w-16 ml-auto" /></td>
+                    <td className="px-6 py-4"><Skeleton className="h-4 w-12 ml-auto" /></td>
+                    <td className="px-6 py-4"><Skeleton className="h-8 w-8 rounded-lg ml-auto" /></td>
+                  </tr>
+                ))
               ) : products.length === 0 ? (
                 <tr>
                   <td colSpan="7" className="px-6 py-10 text-center text-gray-400">
@@ -297,23 +328,32 @@ export default function ProductsPage() {
                       <div className="flex items-center gap-3">
                         <input type="checkbox" className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
                         <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-lg bg-gray-100 border border-gray-100">
-                          <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" />
+                          <img
+                            src={getPrimaryProductImageUrl(product.image_url)}
+                            alt={product.name}
+                            className="h-full w-full object-cover"
+                          />
                         </div>
                         <div className="min-w-0">
-                          <div className="font-medium text-gray-900 truncate">{product.name}</div>
+                          <div className="font-medium text-gray-900 truncate capitalize">{product.name}</div>
                           <div className="text-xs text-gray-400">{product.sku}</div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-gray-500">{product.category}</td>
                     <td className="px-6 py-4">
-                      <span className={clsx("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset", getStatusBadge(product.status, product.stock))}>
-                        {product.stock === 0 ? "Out of Stock" : product.stock < 10 ? "Low Stock" : product.status}
-                      </span>
+                      <div className="flex items-center gap-2 whitespace-nowrap">
+                        <span className={clsx("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset", getStatusBadge(product.status))}>
+                          {getStatusLabel(product.status)}
+                        </span>
+                        <span className={clsx("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset", getStockBadge(product.stock))}>
+                          {getStockLabel(product.stock)}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <span className={clsx("inline-flex items-center rounded-md px-2 py-1 text-xs font-medium", getStockColor(product.status, product.stock))}>
-                        {product.stock} in stock
+                        {product.stock}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right font-medium text-gray-900">
@@ -322,27 +362,29 @@ export default function ProductsPage() {
                     <td className="px-6 py-4 text-right text-gray-500">
                       {product.sales}
                     </td>
-                    <td className="px-6 py-4 text-right relative">
-                      <button
-                        ref={(el) => (actionRefs.current[product.id] = el)}
-                        onClick={() => setOpenActionId(openActionId === product.id ? null : product.id)}
-                        className={clsx(
-                          "rounded-lg p-2 transition-colors",
-                          openActionId === product.id ? "bg-gray-100 text-gray-900" : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-                        )}
-                      >
-                        <Icon icon="mingcute:more-2-fill" width="20" />
-                      </button>
-                      <ProductActionDropdown
-                        isOpen={openActionId === product.id}
-                        onClose={() => setOpenActionId(null)}
-                        anchorRef={{ current: actionRefs.current[product.id] }}
-                        product={product}
-                        onView={(p) => setViewProduct(p)}
-                        onEdit={(p) => setEditProduct(p)}
-                        onDuplicate={(p) => setDuplicateProduct(p)}
-                        onDelete={(p) => setDeleteProduct(p)}
-                      />
+                    <td className="px-6 py-4 text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
+                            <Icon icon="mingcute:more-2-fill" width="20" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48 z-50 rounded-xl bg-white shadow-lg ring-1 ring-gray-100 p-1">
+                          <DropdownMenuItem onClick={() => setViewProduct(product)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 focus:bg-gray-50 hover:text-gray-900 focus:text-gray-900 cursor-pointer text-left focus:outline-none">
+                            <Icon icon="mingcute:eye-2-line" width="18" /> View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setEditProduct(product)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 focus:bg-gray-50 hover:text-gray-900 focus:text-gray-900 cursor-pointer text-left focus:outline-none">
+                            <Icon icon="mingcute:edit-2-line" width="18" /> Edit Product
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setDuplicateProduct(product)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 focus:bg-gray-50 hover:text-gray-900 focus:text-gray-900 cursor-pointer text-left focus:outline-none">
+                            <Icon icon="mingcute:copy-2-line" width="18" /> Duplicate
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator className="my-1 border-t border-gray-100" />
+                          <DropdownMenuItem onClick={() => setDeleteProduct(product)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 focus:bg-red-50 focus:text-red-600 cursor-pointer text-left focus:outline-none">
+                            <Icon icon="mingcute:delete-2-line" width="18" /> Delete Product
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </td>
                   </tr>
                 ))
@@ -377,55 +419,70 @@ export default function ProductsPage() {
         />
 
         {/* Pagination */}
-        <div className="flex flex-col sm:flex-row items-center justify-between border-t border-gray-100 px-6 py-4 bg-white rounded-xl shadow-sm ring-1 ring-gray-100 gap-4">
-          <div className="text-sm text-gray-500 text-center sm:text-left">
-            Showing <span className="font-medium text-gray-900">{Math.min(totalCount, (currentPage - 1) * pageSize + 1)}</span> to <span className="font-medium text-gray-900">{Math.min(totalCount, currentPage * pageSize)}</span> of <span className="font-medium text-gray-900">{totalCount}</span> results
-          </div>
-          <div className="flex items-center gap-2 overflow-x-auto max-w-full pb-2 sm:pb-0 no-scrollbar">
-            <button
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              className="rounded-lg border border-gray-200 px-3 py-1 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 shrink-0"
-            >
-              Previous
-            </button>
-            <div className="flex items-center gap-1">
-              {[...Array(Math.ceil(totalCount / pageSize))].map((_, i) => {
-                const pageNum = i + 1;
-                // Simple pagination logic: show current, first, last, and neighbors
-                if (
-                  pageNum === 1 ||
-                  pageNum === Math.ceil(totalCount / pageSize) ||
-                  (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
-                ) {
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => setCurrentPage(pageNum)}
-                      className={clsx(
-                        "rounded-lg px-3 py-1 text-sm font-medium shrink-0",
-                        currentPage === pageNum ? "bg-blue-50 text-blue-600 border border-blue-100" : "text-gray-600 hover:bg-gray-50"
-                      )}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                }
-                if (pageNum === currentPage - 2 || pageNum === currentPage + 2) {
-                  return <span key={pageNum} className="text-gray-400 shrink-0">...</span>;
-                }
-                return null;
-              })}
+        {loading ? (
+          <div className="flex flex-col sm:flex-row items-center justify-between border-t border-gray-100 px-6 py-4 bg-white rounded-xl shadow-sm ring-1 ring-gray-100 gap-4">
+            <div className="w-48"><Skeleton className="h-5 w-full" /></div>
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-8 w-20 rounded-lg" />
+              <div className="flex items-center gap-1 hidden sm:flex">
+                <Skeleton className="h-8 w-8 rounded-lg" />
+                <Skeleton className="h-8 w-8 rounded-lg" />
+                <Skeleton className="h-8 w-8 rounded-lg" />
+              </div>
+              <Skeleton className="h-8 w-16 rounded-lg" />
             </div>
-            <button
-              disabled={currentPage >= Math.ceil(totalCount / pageSize)}
-              onClick={() => setCurrentPage(p => p + 1)}
-              className="rounded-lg border border-gray-200 px-3 py-1 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 shrink-0"
-            >
-              Next
-            </button>
           </div>
-        </div>
+        ) : (
+          <div className="flex flex-col sm:flex-row items-center justify-between border-t border-gray-100 px-6 py-4 bg-white rounded-xl shadow-sm ring-1 ring-gray-100 gap-4">
+            <div className="text-sm text-gray-500 text-center sm:text-left">
+              Showing <span className="font-medium text-gray-900">{Math.min(totalCount, (currentPage - 1) * pageSize + 1)}</span> to <span className="font-medium text-gray-900">{Math.min(totalCount, currentPage * pageSize)}</span> of <span className="font-medium text-gray-900">{totalCount}</span> results
+            </div>
+            <div className="flex items-center gap-2 overflow-x-auto max-w-full pb-2 sm:pb-0 no-scrollbar">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                className="rounded-lg border border-gray-200 px-3 py-1 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 shrink-0"
+              >
+                Previous
+              </button>
+              <div className="flex items-center gap-1">
+                {[...Array(Math.ceil(totalCount / pageSize))].map((_, i) => {
+                  const pageNum = i + 1;
+                  // Simple pagination logic: show current, first, last, and neighbors
+                  if (
+                    pageNum === 1 ||
+                    pageNum === Math.ceil(totalCount / pageSize) ||
+                    (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
+                  ) {
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={clsx(
+                          "rounded-lg px-3 py-1 text-sm font-medium shrink-0",
+                          currentPage === pageNum ? "bg-blue-50 text-blue-600 border border-blue-100" : "text-gray-600 hover:bg-gray-50"
+                        )}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  }
+                  if (pageNum === currentPage - 2 || pageNum === currentPage + 2) {
+                    return <span key={pageNum} className="text-gray-400 shrink-0">...</span>;
+                  }
+                  return null;
+                })}
+              </div>
+              <button
+                disabled={currentPage >= Math.ceil(totalCount / pageSize)}
+                onClick={() => setCurrentPage(p => p + 1)}
+                className="rounded-lg border border-gray-200 px-3 py-1 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 shrink-0"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

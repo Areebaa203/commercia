@@ -6,13 +6,14 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Icon } from "@iconify/react";
 import { signUpSchema } from "@/lib/validations/auth";
+import { useToast } from "@/hooks/use-toast";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [serverError, setServerError] = useState("");
-  const [successMsg, setSuccessMsg] = useState("");
 
   const {
     register,
@@ -32,11 +33,6 @@ export default function RegisterPage() {
 
   const onSubmit = async (data) => {
     setServerError("");
-    setSuccessMsg("");
-
-    // console.log("form data::",data);
-    // console.log("form data in json format::", JSON.stringify(data))
-    // return;
 
     const res = await fetch("/api/auth/signup", {
       method: "POST",
@@ -51,7 +47,12 @@ export default function RegisterPage() {
       return;
     }
 
-    setSuccessMsg(json.message);
+    toast({
+      title: "Success",
+      description: "Account created successfully.",
+    });
+
+    router.push("/");
   };
 
   return (
@@ -101,18 +102,8 @@ export default function RegisterPage() {
               {serverError}
             </div>
           )}
-          {successMsg && (
-            <div className="flex items-start gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-              <Icon icon="mingcute:check-circle-line" className="mt-0.5 shrink-0 text-lg" />
-              <span>
-                {successMsg}{" "}
-                <Link href="/" className="font-bold underline">Sign in</Link>
-              </span>
-            </div>
-          )}
 
-          {!successMsg && (
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
             <button
               type="button"
               className="flex w-full items-center justify-center gap-3 rounded-xl border border-gray-200 bg-white py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"
@@ -261,7 +252,6 @@ export default function RegisterPage() {
               </button>
             </div>
           </form>
-          )}
 
           <p className="text-center text-sm text-gray-500">
             Already have an account?{" "}

@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { Icon } from "@iconify/react";
 import { clsx } from "clsx";
+import { parseProductImageUrls } from "@/lib/product-images";
 
 const ViewProductModal = ({ isOpen, onClose, product }) => {
   const [isVisible, setIsVisible] = useState(false);
@@ -51,11 +52,20 @@ const ViewProductModal = ({ isOpen, onClose, product }) => {
         </div>
 
         {/* Content */}
-        {product && (
+        {product && (() => {
+          const gallery = parseProductImageUrls(product.image_url);
+          const hero = gallery[0];
+          return (
             <div className="space-y-6">
                 <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
                     <div className="h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-white border border-gray-200">
-                        <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" />
+                        {hero ? (
+                          <img src={hero} alt={product.name} className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center bg-gray-100 text-gray-400">
+                            <Icon icon="mingcute:pic-line" width="28" />
+                          </div>
+                        )}
                     </div>
                     <div>
                         <h4 className="font-bold text-gray-900 text-lg">{product.name}</h4>
@@ -74,6 +84,19 @@ const ViewProductModal = ({ isOpen, onClose, product }) => {
                         </div>
                     </div>
                 </div>
+
+                {gallery.length > 1 && (
+                  <div className="flex flex-wrap gap-2">
+                    {gallery.map((url, i) => (
+                      <div
+                        key={`${url}-${i}`}
+                        className="h-14 w-14 shrink-0 overflow-hidden rounded-md border border-gray-200 bg-white"
+                      >
+                        <img src={url} alt="" className="h-full w-full object-cover" />
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                     <div className="p-3 rounded-lg border border-gray-100 bg-white">
@@ -120,7 +143,8 @@ const ViewProductModal = ({ isOpen, onClose, product }) => {
                     </button>
                 </div>
             </div>
-        )}
+          );
+        })()}
       </div>
     </div>
   );

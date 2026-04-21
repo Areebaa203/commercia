@@ -108,3 +108,14 @@ body {
     @apply font-sans;
   }
 }
+
+/* Native search input cancel button — cursor & alignment */
+input[type="search"]::-webkit-search-cancel-button {
+  cursor: pointer;
+  position: relative;
+}
+
+input[type="search"].search-input::-webkit-search-cancel-button {
+  -webkit-appearance: auto;
+  cursor: pointer;
+}
