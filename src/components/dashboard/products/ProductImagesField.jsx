@@ -24,7 +24,7 @@ function clientAllowsFile(file) {
 /**
  * Multi-image upload via POST /api/upload/cloudinary; stores JSON array of { url, publicId? } in `image_url`.
  */
-export default function ProductImagesField({ value, onChange, errorMessage, disabled }) {
+export default function ProductImagesField({ value, onChange, errorMessage, disabled, label = "Product images" }) {
   const [uploading, setUploading] = useState(false);
   const [deletingIndex, setDeletingIndex] = useState(null);
   const [localError, setLocalError] = useState("");
@@ -118,7 +118,7 @@ export default function ProductImagesField({ value, onChange, errorMessage, disa
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
-        <label className="text-xs font-medium text-gray-700">Product images</label>
+        <label className="text-xs font-medium text-gray-700">{label}</label>
         <span className="text-[11px] text-gray-400">
           {images.length}/{MAX_IMAGES} · max 5 MB each · multi-select · JPG, PNG, WebP, HEIC/HEIF
         </span>

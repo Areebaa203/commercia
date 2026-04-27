@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Icon } from "@iconify/react";
 import { clsx } from "clsx";
 import StatsCard from "@/components/dashboard/shared/StatsCard";
@@ -7,82 +7,115 @@ import DiscountActionDropdown from "@/components/dashboard/discounts/DiscountAct
 import AddDiscountModal from "@/components/dashboard/discounts/AddDiscountModal";
 import DuplicateDiscountModal from "@/components/dashboard/discounts/DuplicateDiscountModal";
 import DeleteDiscountModal from "@/components/dashboard/discounts/DeleteDiscountModal";
+import { Skeleton } from "@/components/ui/skeleton";
+import axios from "axios";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
-// Mock Data
-const initialDiscounts = [
-  {
-    id: 1,
-    code: "SUMMER2024",
-    type: "percentage",
-    value: "20",
-    status: "Active",
-    used: 145,
-    limit: 500,
-    startDate: "Jun 1, 2024",
-    endDate: "Aug 31, 2024",
-  },
-  {
-    id: 2,
-    code: "WELCOME10",
-    type: "percentage",
-    value: "10",
-    status: "Active",
-    used: 892,
-    limit: "Unlimited",
-    startDate: "Jan 1, 2024",
-    endDate: null,
-  },
-  {
-    id: 3,
-    code: "FLASH50",
-    type: "fixed",
-    value: "50",
-    status: "Expired",
-    used: 50,
-    limit: 50,
-    startDate: "May 10, 2024",
-    endDate: "May 12, 2024",
-  },
-  {
-    id: 4,
-    code: "FREESHIP",
-    type: "free_shipping",
-    value: "0",
-    status: "Scheduled",
-    used: 0,
-    limit: 100,
-    startDate: "Dec 1, 2024",
-    endDate: "Dec 31, 2024",
-  },
-  {
-    id: 5,
-    code: "BLACKFRIDAY",
-    type: "percentage",
-    value: "40",
-    status: "Scheduled",
-    used: 0,
-    limit: "Unlimited",
-    startDate: "Nov 24, 2024",
-    endDate: "Nov 27, 2024",
-  },
-];
+// Format Date helper
+const formatDate = (dateStr) => {
+  if (!dateStr) return null;
+  const date = new Date(dateStr);
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+};
 
 export default function DiscountsPage() {
   const [selectedStatus, setSelectedStatus] = useState("All");
-  const [discounts, setDiscounts] = useState(initialDiscounts);
+  const [discounts, setDiscounts] = useState([]);
+  const [stats, setStats] = useState({ active: 0, redemptions: 0, saved: 0 });
+  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editData, setEditData] = useState(null);
+  
+  // Search State
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debounceRef = useRef(null);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const pageSize = 10;
   
   // Modal States
   const [duplicateModalOpen, setDuplicateModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedDiscount, setSelectedDiscount] = useState(null);
+  const [errorDialog, setErrorDialog] = useState({ open: false, message: "" });
+  const activeRequestRef = useRef(0);
 
-  // Filter Logic
-  const filteredDiscounts = discounts.filter((discount) => {
-    if (selectedStatus === "All") return true;
-    return discount.status === selectedStatus;
-  });
+  // Fetch Discounts
+  const fetchDiscounts = useCallback(async () => {
+    const requestId = activeRequestRef.current + 1;
+    activeRequestRef.current = requestId;
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({
+        q: debouncedSearch,
+        status: selectedStatus,
+        page: String(currentPage),
+        pageSize: String(pageSize),
+      });
+
+      const response = await fetch(`/api/discounts?${params.toString()}`);
+      const payload = await response.json();
+
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.message || "Failed to fetch discounts");
+      }
+
+      if (activeRequestRef.current !== requestId) return;
+
+      const data = payload.data || {};
+      
+      const formattedData = (data.discounts || []).map((d) => ({
+        id: d.id,
+        code: d.code,
+        type: d.type,
+        value: d.value,
+        status: d.status.charAt(0).toUpperCase() + d.status.slice(1), // Capitalize
+        used: d.used_count || 0,
+        limit: d.usage_limit || "Unlimited",
+        startDate: formatDate(d.start_date),
+        endDate: formatDate(d.end_date),
+        raw: d,
+      }));
+      setDiscounts(formattedData);
+      setTotalCount(data.totalCount || 0);
+
+      if (data.stats) {
+        setStats(data.stats);
+      }
+    } catch (err) {
+      if (activeRequestRef.current !== requestId) return;
+      console.error("Error fetching discounts:", err.message);
+    } finally {
+      if (activeRequestRef.current !== requestId) return;
+      setLoading(false);
+    }
+  }, [debouncedSearch, selectedStatus, currentPage]);
+
+  useEffect(() => {
+    fetchDiscounts();
+  }, [fetchDiscounts]);
+
+  // Debounce: update debouncedSearch 400ms after user stops typing
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 400);
+    return () => clearTimeout(debounceRef.current);
+  }, [searchQuery]);
+
+
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -110,58 +143,15 @@ export default function DiscountsPage() {
     }
   };
 
-  const confirmDelete = () => {
-    if (selectedDiscount) {
-      setDiscounts(discounts.filter((d) => d.id !== selectedDiscount.id));
-      setSelectedDiscount(null);
+  const handleDeactivate = async (id) => {
+    try {
+      await axios.patch(`/api/discounts/update/${id}`, { status: "expired" });
+      fetchDiscounts();
+    } catch (err) {
+      console.error("Deactivate Error:", err);
+      const msg = err.response?.data?.message || err.message || "Failed to deactivate discount.";
+      setErrorDialog({ open: true, message: "Failed to deactivate discount: " + msg });
     }
-  };
-
-  const handleDeactivate = (id) => {
-    setDiscounts(
-      discounts.map((d) =>
-        d.id === id ? { ...d, status: "Expired" } : d
-      )
-    );
-  };
-
-  const confirmDuplicate = () => {
-    if (selectedDiscount) {
-      const newDiscount = {
-        ...selectedDiscount,
-        id: Math.max(...discounts.map((d) => d.id)) + 1,
-        code: `${selectedDiscount.code}-COPY`,
-        status: "Scheduled",
-        used: 0,
-      };
-      setDiscounts([newDiscount, ...discounts]);
-      setSelectedDiscount(null);
-    }
-  };
-
-  const handleSave = (newDiscount) => {
-    if (editData) {
-      // Edit existing
-      setDiscounts(
-        discounts.map((d) =>
-          d.id === editData.id ? { ...d, ...newDiscount } : d
-        )
-      );
-    } else {
-      // Create new
-      const id = Math.max(...discounts.map((d) => d.id)) + 1;
-      setDiscounts([
-        {
-          id,
-          ...newDiscount,
-          used: 0,
-          limit: "Unlimited", // Default for now
-          status: "Active", // Default
-        },
-        ...discounts,
-      ]);
-    }
-    setEditData(null);
   };
 
   return (
@@ -190,28 +180,28 @@ export default function DiscountsPage() {
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
         <StatsCard
           title="Active Discounts"
-          value={discounts.filter((d) => d.status === "Active").length}
-          change="2"
+          value={loading ? "-" : stats.active}
+          change="+"
           changeType="positive"
-          period="new this month"
+          period="currently running"
           icon="mingcute:tag-2-fill"
           iconColor="text-blue-600"
         />
         <StatsCard
           title="Total Redemptions"
-          value="1,245"
-          change="12%"
+          value={loading ? "-" : stats.redemptions.toLocaleString()}
+          change="+"
           changeType="positive"
-          period="vs last month"
+          period="all time"
           icon="mingcute:coupon-fill"
           iconColor="text-purple-600"
         />
         <StatsCard
           title="Total Saved"
-          value="$12,450"
-          change="8%"
+          value={loading ? "-" : `$${stats.saved.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          change="+"
           changeType="positive"
-          period="vs last month"
+          period="estimated value"
           icon="mingcute:wallet-3-fill"
           iconColor="text-green-600"
         />
@@ -229,12 +219,15 @@ export default function DiscountsPage() {
       {/* Main Content */}
       <div className="rounded-xl border border-gray-100 bg-white shadow-sm">
         {/* Tabs/Filter */}
-        <div className="border-b border-gray-100 p-4">
+        <div className="border-b border-gray-100 p-4 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
           <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
             {["All", "Active", "Scheduled", "Expired"].map((tab) => (
               <button
                 key={tab}
-                onClick={() => setSelectedStatus(tab)}
+                onClick={() => {
+                  setSelectedStatus(tab);
+                  setCurrentPage(1);
+                }}
                 className={clsx(
                   "rounded-lg px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap",
                   selectedStatus === tab
@@ -245,6 +238,25 @@ export default function DiscountsPage() {
                 {tab}
               </button>
             ))}
+          </div>
+          
+          {/* Search */}
+          <div className="mt-4 sm:ml-auto sm:mt-0 sm:w-64 relative">
+             <Icon icon="mingcute:search-line" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" width="18" />
+             <input
+               type="search"
+               placeholder="Search discounts..."
+               value={searchQuery}
+               onChange={(e) => {
+                 setSearchQuery(e.target.value);
+                 setCurrentPage(1);
+                 if (!e.target.value) {
+                   if (debounceRef.current) clearTimeout(debounceRef.current);
+                   setDebouncedSearch("");
+                 }
+               }}
+               className="search-input w-full rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-4 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
+             />
           </div>
         </div>
 
@@ -262,8 +274,32 @@ export default function DiscountsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredDiscounts.length > 0 ? (
-                filteredDiscounts.map((discount) => (
+              {loading ? (
+                Array.from({ length: 5 }).map((_, idx) => (
+                  <tr key={idx} className="border-t border-gray-100 animate-pulse">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="h-10 w-10 shrink-0 rounded-lg" />
+                        <div className="space-y-2 w-full max-w-[150px]">
+                          <Skeleton className="h-4 w-full" />
+                          <Skeleton className="h-3 w-2/3" />
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4"><Skeleton className="h-6 w-16 rounded-full" /></td>
+                    <td className="px-6 py-4"><Skeleton className="h-4 w-16" /></td>
+                    <td className="px-6 py-4"><Skeleton className="h-4 w-16" /></td>
+                    <td className="px-6 py-4">
+                      <div className="space-y-2 w-24">
+                          <Skeleton className="h-3 w-full" />
+                          <Skeleton className="h-3 w-4/5" />
+                      </div>
+                    </td>
+                    <td className="px-6 py-4"><Skeleton className="h-8 w-8 rounded-lg ml-auto" /></td>
+                  </tr>
+                ))
+              ) : discounts.length > 0 ? (
+                discounts.map((discount) => (
                   <tr key={discount.id} className="group hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
@@ -323,6 +359,7 @@ export default function DiscountsPage() {
                     </td>
                   </tr>
                 ))
+
               ) : (
                 <tr>
                   <td colSpan="6" className="py-12 text-center text-gray-500">
@@ -342,55 +379,102 @@ export default function DiscountsPage() {
       </div>
 
       {/* Pagination */}
-      <div className="flex flex-col sm:flex-row items-center justify-between border-t border-gray-100 px-6 py-4 bg-white rounded-xl shadow-sm ring-1 ring-gray-100 gap-4">
-            <div className="text-sm text-gray-500 text-center sm:text-left">
-                Showing <span className="font-medium text-gray-900">1</span> to <span className="font-medium text-gray-900">5</span> of <span className="font-medium text-gray-900">45</span> results
+      {loading ? (
+        <div className="flex flex-col sm:flex-row items-center justify-between border-t border-gray-100 px-6 py-4 bg-white rounded-xl shadow-sm ring-1 ring-gray-100 gap-4">
+          <div className="w-48"><Skeleton className="h-5 w-full" /></div>
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-8 w-20 rounded-lg" />
+            <div className="flex items-center gap-1 hidden sm:flex">
+              <Skeleton className="h-8 w-8 rounded-lg" />
+              <Skeleton className="h-8 w-8 rounded-lg" />
+              <Skeleton className="h-8 w-8 rounded-lg" />
             </div>
-            <div className="flex items-center gap-2 overflow-x-auto max-w-full pb-2 sm:pb-0 no-scrollbar">
-                <button className="rounded-lg border border-gray-200 px-3 py-1 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 shrink-0">
-                    Previous
-                </button>
-                <div className="flex items-center gap-1">
-                    <button className="rounded-lg bg-blue-50 px-3 py-1 text-sm font-medium text-blue-600 border border-blue-100 shrink-0">
-                        1
+            <Skeleton className="h-8 w-16 rounded-lg" />
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col sm:flex-row items-center justify-between border-t border-gray-100 px-6 py-4 bg-white rounded-xl shadow-sm ring-1 ring-gray-100 gap-4">
+          <div className="text-sm text-gray-500 text-center sm:text-left">
+            Showing <span className="font-medium text-gray-900">{Math.min(totalCount, (currentPage - 1) * pageSize + 1)}</span> to <span className="font-medium text-gray-900">{Math.min(totalCount, currentPage * pageSize)}</span> of <span className="font-medium text-gray-900">{totalCount}</span> results
+          </div>
+          <div className="flex items-center gap-2 overflow-x-auto max-w-full pb-2 sm:pb-0 no-scrollbar">
+            <button
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              className="rounded-lg border border-gray-200 px-3 py-1 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 shrink-0"
+            >
+              Previous
+            </button>
+            <div className="flex items-center gap-1">
+              {[...Array(Math.ceil(totalCount / pageSize) || 1)].map((_, i) => {
+                const pageNum = i + 1;
+                if (
+                  pageNum === 1 ||
+                  pageNum === Math.ceil(totalCount / pageSize) ||
+                  (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
+                ) {
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={clsx(
+                        "rounded-lg px-3 py-1 text-sm font-medium shrink-0",
+                        currentPage === pageNum ? "bg-blue-50 text-blue-600 border border-blue-100" : "text-gray-600 hover:bg-gray-50"
+                      )}
+                    >
+                      {pageNum}
                     </button>
-                    <button className="rounded-lg px-3 py-1 text-sm font-medium text-gray-600 hover:bg-gray-50 shrink-0">
-                        2
-                    </button>
-                    <button className="rounded-lg px-3 py-1 text-sm font-medium text-gray-600 hover:bg-gray-50 shrink-0 hidden sm:block">
-                        3
-                    </button>
-                    <span className="text-gray-400 shrink-0">...</span>
-                    <button className="rounded-lg px-3 py-1 text-sm font-medium text-gray-600 hover:bg-gray-50 shrink-0 hidden sm:block">
-                        5
-                    </button>
-                </div>
-                <button className="rounded-lg border border-gray-200 px-3 py-1 text-sm font-medium text-gray-600 hover:bg-gray-50 shrink-0">
-                    Next
-                </button>
+                  );
+                }
+                if (pageNum === currentPage - 2 || pageNum === currentPage + 2) {
+                  return <span key={pageNum} className="text-gray-400 shrink-0">...</span>;
+                }
+                return null;
+              })}
             </div>
-      </div>
+            <button
+              disabled={currentPage >= Math.ceil(totalCount / pageSize) || totalCount === 0}
+              onClick={() => setCurrentPage(p => p + 1)}
+              className="rounded-lg border border-gray-200 px-3 py-1 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 shrink-0"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
       <AddDiscountModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onSave={handleSave}
+        onSuccess={fetchDiscounts}
         initialData={editData}
       />
 
       <DuplicateDiscountModal
         isOpen={duplicateModalOpen}
         onClose={() => setDuplicateModalOpen(false)}
-        onConfirm={confirmDuplicate}
-        discountName={selectedDiscount?.code}
+        onSuccess={fetchDiscounts}
+        discount={selectedDiscount}
       />
 
       <DeleteDiscountModal
         isOpen={deleteModalOpen}
         onClose={() => setDeleteModalOpen(false)}
-        onConfirm={confirmDelete}
-        discountName={selectedDiscount?.code}
+        onSuccess={fetchDiscounts}
+        discount={selectedDiscount}
       />
+
+      <AlertDialog open={errorDialog.open} onOpenChange={(open) => setErrorDialog(prev => ({ ...prev, open }))}>
+        <AlertDialogContent className="z-[60]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Error</AlertDialogTitle>
+            <AlertDialogDescription>{errorDialog.message}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setErrorDialog({ open: false, message: "" })}>OK</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

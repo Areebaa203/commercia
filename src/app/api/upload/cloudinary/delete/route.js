@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   configureCloudinaryFromEnv,
-  destroyCloudinaryImage,
+  destroyCloudinaryAsset,
 } from "@/lib/cloudinary-admin";
 
 export const runtime = "nodejs";
@@ -26,7 +26,8 @@ export async function POST(request) {
       return NextResponse.json({ success: false, message: "publicId is required." }, { status: 400 });
     }
 
-    const result = await destroyCloudinaryImage(publicId);
+    const resourceType = body?.resourceType === "video" ? "video" : "image";
+    const result = await destroyCloudinaryAsset(publicId, resourceType);
     if (result?.result !== "ok" && result?.result !== "not found") {
       return NextResponse.json(
         { success: false, message: result?.result || "Delete failed." },

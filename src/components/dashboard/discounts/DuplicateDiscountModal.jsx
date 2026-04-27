@@ -2,9 +2,21 @@
 import React, { useEffect, useState } from "react";
 import { Icon } from "@iconify/react";
 import { clsx } from "clsx";
+import axios from "axios";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
-const DuplicateDiscountModal = ({ isOpen, onClose, onConfirm, discountName }) => {
+const DuplicateDiscountModal = ({ isOpen, onClose, discount, onSuccess }) => {
   const [isVisible, setIsVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorDialog, setErrorDialog] = useState({ open: false, message: "" });
 
   useEffect(() => {
     if (isOpen) {
@@ -39,29 +51,78 @@ const DuplicateDiscountModal = ({ isOpen, onClose, onConfirm, discountName }) =>
           </div>
           <h3 className="mb-2 text-xl font-bold text-gray-900">Duplicate Discount?</h3>
           <p className="text-gray-500">
-            Are you sure you want to duplicate <span className="font-semibold text-gray-900">"{discountName}"</span>? 
+            Are you sure you want to duplicate <span className="font-semibold text-gray-900">"{discount?.code}"</span>? 
             This will create a new discount with the same settings but a different code suffix.
           </p>
         </div>
 
         <div className="flex gap-3">
           <button
+            disabled={loading}
             onClick={onClose}
-            className="flex-1 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+            className="flex-1 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
           <button
-            onClick={() => {
-              onConfirm();
-              onClose();
+            disabled={loading}
+            onClick={async () => {
+              setLoading(true);
+              try {
+                const newDiscountCode = `${discount.code}COPY${Math.floor(Math.random() * 100)}`;
+                const newDiscount = {
+                  code: newDiscountCode,
+                  type: discount.type,
+                  value: discount.value,
+                  limitUsage: discount.limit !== "Unlimited",
+                  limit: discount.limit !== "Unlimited" ? discount.limit : undefined,
+                  hasEndDate: false, // Default copy behavior, requires editing to add expiry typically
+                  status: "Active",
+                  startDate: new Date().toISOString(),
+                  endDate: null,
+                };
+                
+                await axios.post("/api/discounts/add", newDiscount);
+                
+                onSuccess?.();
+                onClose();
+              } catch (error) {
+                const msg =
+                  error.response?.data?.message ||
+                  (error.response?.data?.errors &&
+                    Object.values(error.response.data.errors).flat().join(" ")) ||
+                  error.message ||
+                  "Failed to duplicate discount.";
+                console.error("Error duplicating discount:", msg);
+                setErrorDialog({ open: true, message: "Failed to duplicate discount: " + msg });
+              } finally {
+                setLoading(false);
+              }
             }}
-            className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 shadow-sm shadow-blue-500/20 transition-colors"
+            className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 shadow-sm shadow-blue-500/20 transition-colors inline-flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            Duplicate
+            {loading ? (
+              <>
+                <Icon icon="mingcute:loading-fill" className="animate-spin shrink-0" width="18" />
+                Duplicating...
+              </>
+            ) : (
+              "Duplicate"
+            )}
           </button>
         </div>
       </div>
+      <AlertDialog open={errorDialog.open} onOpenChange={(open) => setErrorDialog(prev => ({ ...prev, open }))}>
+        <AlertDialogContent className="z-[60]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Error</AlertDialogTitle>
+            <AlertDialogDescription>{errorDialog.message}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setErrorDialog({ open: false, message: "" })}>OK</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

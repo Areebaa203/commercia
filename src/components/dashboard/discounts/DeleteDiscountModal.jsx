@@ -2,9 +2,21 @@
 import React, { useEffect, useState } from "react";
 import { Icon } from "@iconify/react";
 import { clsx } from "clsx";
+import axios from "axios";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
-const DeleteDiscountModal = ({ isOpen, onClose, onConfirm, discountName }) => {
+const DeleteDiscountModal = ({ isOpen, onClose, discount, onSuccess }) => {
   const [isVisible, setIsVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorDialog, setErrorDialog] = useState({ open: false, message: "" });
 
   useEffect(() => {
     if (isOpen) {
@@ -39,29 +51,62 @@ const DeleteDiscountModal = ({ isOpen, onClose, onConfirm, discountName }) => {
           </div>
           <h3 className="mb-2 text-xl font-bold text-gray-900">Delete Discount?</h3>
           <p className="text-gray-500">
-            Are you sure you want to delete <span className="font-semibold text-gray-900">"{discountName}"</span>? 
+            Are you sure you want to delete <span className="font-semibold text-gray-900">"{discount?.code}"</span>? 
             This action cannot be undone and the code will no longer be usable.
           </p>
         </div>
 
         <div className="flex gap-3">
           <button
+            disabled={loading}
             onClick={onClose}
-            className="flex-1 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+            className="flex-1 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
           <button
-            onClick={() => {
-              onConfirm();
-              onClose();
+            disabled={loading}
+            onClick={async () => {
+              setLoading(true);
+              try {
+                await axios.delete(`/api/discounts/delete/${discount.id}`);
+                onSuccess?.();
+                onClose();
+              } catch (error) {
+                const msg =
+                  error.response?.data?.message ||
+                  error.message ||
+                  "Failed to delete discount.";
+                console.error("Error deleting discount:", msg);
+                setErrorDialog({ open: true, message: "Failed to delete discount: " + msg });
+              } finally {
+                setLoading(false);
+              }
             }}
-            className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700 shadow-sm shadow-red-500/20 transition-colors"
+            className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700 shadow-sm shadow-red-500/20 transition-colors inline-flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            Delete
+            {loading ? (
+              <>
+                <Icon icon="mingcute:loading-fill" className="animate-spin shrink-0" width="18" />
+                Deleting...
+              </>
+            ) : (
+              "Delete"
+            )}
           </button>
         </div>
       </div>
+      <AlertDialog open={errorDialog.open} onOpenChange={(open) => setErrorDialog(prev => ({ ...prev, open }))}>
+        <AlertDialogContent className="z-[60]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Error</AlertDialogTitle>
+            <AlertDialogDescription>{errorDialog.message}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setErrorDialog({ open: false, message: "" })}>OK</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

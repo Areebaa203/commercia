@@ -60,6 +60,18 @@ export function getPrimaryProductImageUrl(value) {
  * Derive Cloudinary `public_id` from a delivery URL under our upload folder.
  * Safe for client and server usage.
  */
+/** Cloudinary delivery URLs use `/image/upload/` or `/video/upload/`. */
+export function inferCloudinaryResourceTypeFromUrl(url) {
+  if (!url || typeof url !== "string") return "image";
+  try {
+    const u = new URL(url.trim());
+    if (u.pathname.includes("/video/upload/")) return "video";
+    return "image";
+  } catch {
+    return "image";
+  }
+}
+
 export function inferCloudinaryPublicIdFromUrl(url) {
   if (!url || typeof url !== "string") return null;
   let u;

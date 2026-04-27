@@ -3,28 +3,17 @@ import { Readable } from "node:stream";
 import { v2 as cloudinary } from "cloudinary";
 import {
   configureCloudinaryFromEnv,
-  destroyCloudinaryImage,
+  destroyCloudinaryAsset,
   UPLOAD_FOLDER_PREFIX,
 } from "@/lib/cloudinary-admin";
+import { validateUploadFile } from "@/lib/validations/upload";
 
 export const runtime = "nodejs";
 
-export const maxDuration = 60;
-
-const MAX_BYTES = 5 * 1024 * 1024;
-const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]);
-const ALLOWED_EXT = /\.(jpe?g|png|webp|hei[cf])$/i;
-
-function isAllowedFile(file) {
-  const name = (file.name || "").toLowerCase();
-  const type = (file.type || "").toLowerCase();
-  if (ALLOWED_MIME.has(type)) return true;
-  if (ALLOWED_EXT.test(name)) return true;
-  return false;
-}
+export const maxDuration = 120;
 
 /**
- * DELETE JSON body: `{ "publicId": "..." }` — kept for backwards compatibility; prefer POST `/api/upload/cloudinary/delete`.
+ * DELETE JSON body: `{ "publicId": "...", "resourceType"?: "image" | "video" }` — prefer POST `/api/upload/cloudinary/delete`.
  */
 export async function DELETE(request) {
   const cfg = configureCloudinaryFromEnv();
@@ -42,7 +31,8 @@ export async function DELETE(request) {
       return NextResponse.json({ success: false, message: "publicId is required." }, { status: 400 });
     }
 
-    const result = await destroyCloudinaryImage(publicId);
+    const resourceType = body?.resourceType === "video" ? "video" : "image";
+    const result = await destroyCloudinaryAsset(publicId, resourceType);
     if (result?.result !== "ok" && result?.result !== "not found") {
       return NextResponse.json(
         { success: false, message: result?.result || "Delete failed." },
@@ -61,7 +51,7 @@ export async function DELETE(request) {
 }
 
 /**
- * POST multipart/form-data: field `file` — uploads to Cloudinary.
+ * POST multipart/form-data: field `file`, optional `resourceType` (`image` default, `video` for video uploads).
  */
 export async function POST(request) {
   const cfg = configureCloudinaryFromEnv();
@@ -78,30 +68,22 @@ export async function POST(request) {
   try {
     const formData = await request.formData();
     const file = formData.get("file");
+    const resourceTypeRaw = String(formData.get("resourceType") || "").toLowerCase();
+    const isVideo = resourceTypeRaw === "video";
 
-    if (!file || typeof file === "string") {
-      return NextResponse.json({ success: false, message: "No file uploaded." }, { status: 400 });
-    }
-
-    if (file.size > MAX_BYTES) {
-      return NextResponse.json({ success: false, message: "Each image must be smaller than 5 MB." }, { status: 400 });
-    }
-
-    if (!isAllowedFile(file)) {
-      return NextResponse.json(
-        { success: false, message: "Allowed formats: JPG, PNG, WebP, HEIC, or HEIF." },
-        { status: 400 }
-      );
+    const validation = validateUploadFile(file, isVideo ? "video" : "image");
+    if (!validation.ok) {
+      return NextResponse.json({ success: false, message: validation.message }, { status: 400 });
     }
 
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-
+    // convert bytes into buffer
     const uploaded = await new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder: UPLOAD_FOLDER_PREFIX.replace(/\/$/, ""),
-          resource_type: "image",
+          resource_type: isVideo ? "video" : "image",
         },
         (err, result) => {
           if (err) reject(err);

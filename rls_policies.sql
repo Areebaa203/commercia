@@ -121,3 +121,23 @@ DROP POLICY IF EXISTS "Staff have full access to store pages" ON store_pages;
 CREATE POLICY "Staff have full access to store pages" ON store_pages FOR ALL TO authenticated USING (is_staff());
 DROP POLICY IF EXISTS "Staff have full access to menus" ON navigation_menus;
 CREATE POLICY "Staff have full access to menus" ON navigation_menus FOR ALL TO authenticated USING (is_staff());
+
+-- In-app notifications: rows for this user OR global rows (user_id NULL, e.g. SQL inserts)
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users read own in-app notifications" ON notifications;
+CREATE POLICY "Users read own in-app notifications"
+ON notifications FOR SELECT TO authenticated
+USING (user_id = auth.uid() OR user_id IS NULL);
+
+DROP POLICY IF EXISTS "Users update own in-app notifications" ON notifications;
+CREATE POLICY "Users update own in-app notifications"
+ON notifications FOR UPDATE TO authenticated
+USING (user_id = auth.uid())
+WITH CHECK (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "Users update global in-app notifications" ON notifications;
+CREATE POLICY "Users update global in-app notifications"
+ON notifications FOR UPDATE TO authenticated
+USING (user_id IS NULL)
+WITH CHECK (user_id IS NULL);

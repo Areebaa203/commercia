@@ -1,91 +1,58 @@
 "use client";
-import React, { useEffect, useState, useRef, useLayoutEffect } from "react";
+import React from "react";
 import { Icon } from "@iconify/react";
 import { clsx } from "clsx";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
-const ContentActionDropdown = ({ isOpen, onClose, anchorRef, content, onView, onEdit, onDelete }) => {
-  const [isVisible, setIsVisible] = useState(false);
-  const dropdownRef = useRef(null);
-  const [position, setPosition] = useState({ top: "100%", right: 0, transformOrigin: "top right" });
-
-  useEffect(() => {
-    if (isOpen) {
-      setIsVisible(true);
-    } else {
-      setTimeout(() => setIsVisible(false), 200);
-    }
-  }, [isOpen]);
-
-  useLayoutEffect(() => {
-    if (isOpen && anchorRef?.current && dropdownRef.current) {
-        const rect = anchorRef.current.getBoundingClientRect();
-        const dropdownHeight = dropdownRef.current.offsetHeight;
-        const windowHeight = window.innerHeight;
-        
-        if (rect.bottom + dropdownHeight + 50 > windowHeight) {
-            setPosition({ bottom: "100%", right: 40, marginBottom: "-24px", transformOrigin: "bottom right" });
-        } else {
-            setPosition({ top: "100%", right: 40, marginTop: "-24px", transformOrigin: "top right" });
-        }
-    }
-  }, [isOpen, anchorRef]);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target) &&
-        anchorRef.current &&
-        !anchorRef.current.contains(event.target)
-      ) {
-        onClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen, onClose, anchorRef]);
-
-  if (!isVisible && !isOpen) return null;
-
+const ContentActionDropdown = ({ content, viewMode, onView, onEdit, onDelete }) => {
   return (
-    <div
-      ref={dropdownRef}
-      className={clsx(
-        "absolute w-48 z-50 rounded-xl bg-white shadow-lg ring-1 ring-gray-100 transition-all duration-200",
-        isOpen
-          ? "opacity-100 scale-100"
-          : "opacity-0 scale-95 pointer-events-none"
-      )}
-      style={position} 
-    >
-      <div className="p-1">
-        <button 
-            onClick={() => { onClose(); onView && onView(content); }}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors text-left"
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          className={clsx(
+            "flex items-center justify-center transition-colors focus:outline-none",
+            viewMode === "grid"
+              ? "h-8 w-8 rounded-full bg-white/90 backdrop-blur-sm text-gray-600 shadow-sm hover:bg-white"
+              : "h-8 w-8 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 focus:bg-gray-100 focus:text-gray-900"
+          )}
         >
-          <Icon icon="mingcute:eye-2-line" width="18" />
+          <Icon icon="mingcute:more-2-fill" className={viewMode === "grid" ? "text-lg" : "text-xl"} />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48 z-50 rounded-xl bg-white shadow-lg ring-1 ring-gray-100 p-1">
+        <DropdownMenuItem 
+          onClick={() => onView && onView(content)}
+          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 focus:bg-gray-50 hover:text-gray-900 focus:text-gray-900 cursor-pointer text-left focus:outline-none"
+        >
+          <Icon icon="mingcute:eye-2-line" className="text-lg" />
           Preview
-        </button>
-        <button 
-            onClick={() => { onClose(); onEdit && onEdit(content); }}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors text-left"
+        </DropdownMenuItem>
+
+        <DropdownMenuItem 
+          onClick={() => onEdit && onEdit(content)}
+          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 focus:bg-gray-50 hover:text-gray-900 focus:text-gray-900 cursor-pointer text-left focus:outline-none"
         >
-          <Icon icon="mingcute:edit-2-line" width="18" />
+          <Icon icon="mingcute:edit-2-line" className="text-lg" />
           Edit Content
-        </button>
-        <div className="my-1 border-t border-gray-100"></div>
-        <button 
-            onClick={() => { onClose(); onDelete && onDelete(content); }}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors text-left"
+        </DropdownMenuItem>
+
+        <DropdownMenuSeparator className="my-1 border-t border-gray-100" />
+        
+        <DropdownMenuItem 
+          onClick={() => onDelete && onDelete(content)}
+          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 focus:bg-red-50 focus:text-red-600 cursor-pointer text-left focus:outline-none"
         >
-          <Icon icon="mingcute:delete-2-line" width="18" />
+          <Icon icon="mingcute:delete-2-line" className="text-lg" />
           Delete
-        </button>
-      </div>
-    </div>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };
 

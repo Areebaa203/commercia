@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { Icon } from "@iconify/react";
 import { usePathname } from "next/navigation";
@@ -21,6 +21,15 @@ const navItems = [
 const Sidebar = () => {
   const pathname = usePathname();
   const { isCollapsed, toggleSidebar, isMobileOpen, closeMobileSidebar } = useSidebar();
+  
+  // Track open state for nav items
+  const [openDropdowns, setOpenDropdowns] = useState({ "Online Store": false });
+  // Track premium widget visibility
+  const [isPremiumOpen, setIsPremiumOpen] = useState(true);
+
+  const toggleDropdown = (name) => {
+    setOpenDropdowns((prev) => ({ ...prev, [name]: !prev[name] }));
+  };
 
   return (
     <>
@@ -151,29 +160,51 @@ const Sidebar = () => {
           </div>
         </div>
 
-        <div className={clsx("shrink-0 pt-4 border-t border-gray-100", isCollapsed ? "lg:px-2 px-4" : "px-4")}>
-              <div className={clsx("relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 p-4 text-white", isCollapsed && "lg:hidden")}>
-                  <div className="relative z-10">
-                      <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm">
-                          <Icon icon="mingcute:diamond-line" width="20" />
+        <div className={clsx("shrink-0 pt-4 border-t border-gray-100 relative", isCollapsed ? "lg:px-2 px-4" : "px-4")}>
+              {/* Premium Box Toggle Button */}
+              {!isCollapsed && (
+                <button
+                  onClick={() => setIsPremiumOpen(!isPremiumOpen)}
+                  className="absolute right-4 -top-3 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-gray-100 bg-white text-gray-400 shadow-sm hover:text-gray-600 hover:bg-gray-50 transition-colors focus:outline-none"
+                  title={isPremiumOpen ? "Hide Premium Offer" : "Show Premium Offer"}
+                >
+                  <Icon 
+                    icon="mingcute:down-line" 
+                    width="14" 
+                    className={clsx("transition-transform duration-300", isPremiumOpen ? "" : "-rotate-90")} 
+                  />
+                </button>
+              )}
+
+              <div className={clsx(
+                "grid transition-all duration-300 ease-in-out",
+                isPremiumOpen || isCollapsed ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+              )}>
+                <div className="overflow-hidden">
+                  <div className={clsx("relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 p-4 text-white", isCollapsed && "lg:hidden")}>
+                      <div className="relative z-10">
+                          <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm">
+                              <Icon icon="mingcute:diamond-line" width="20" />
+                          </div>
+                          <h4 className="mb-1 text-sm font-bold">Upgrade to Premium!</h4>
+                          <p className="mb-3 text-xs text-blue-100">Upgrade your account and unlock all of the benefits.</p>
+                          <Link 
+                              href="/dashboard/upgrade"
+                              onClick={closeMobileSidebar}
+                              className="block w-full text-center rounded-lg bg-white/20 py-2 text-xs font-semibold text-white hover:bg-white/30 backdrop-blur-sm transition-colors"
+                          >
+                              Upgrade premium
+                          </Link>
                       </div>
-                      <h4 className="mb-1 text-sm font-bold">Upgrade to Premium!</h4>
-                      <p className="mb-3 text-xs text-blue-100">Upgrade your account and unlock all of the benefits.</p>
-                      <Link 
-                          href="/dashboard/upgrade"
-                          onClick={closeMobileSidebar}
-                          className="block w-full text-center rounded-lg bg-white/20 py-2 text-xs font-semibold text-white hover:bg-white/30 backdrop-blur-sm transition-colors"
-                      >
-                          Upgrade premium
-                      </Link>
+                      {/* Decorative Circle */}
+                      <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-white/10 blur-2xl"></div>
+                      <div className="absolute -bottom-4 -left-4 h-24 w-24 rounded-full bg-blue-500/20 blur-2xl"></div>
                   </div>
-                  {/* Decorative Circle */}
-                  <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-white/10 blur-2xl"></div>
-                  <div className="absolute -bottom-4 -left-4 h-24 w-24 rounded-full bg-blue-500/20 blur-2xl"></div>
+                </div>
               </div>
               
               {isCollapsed && (
-                  <div className="hidden lg:flex justify-center">
+                  <div className="hidden lg:flex justify-center mt-2">
                       <Link 
                           href="/dashboard/upgrade"
                           className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-lg shadow-blue-500/30 cursor-pointer" 

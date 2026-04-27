@@ -1,9 +1,40 @@
 "use client";
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Icon } from "@iconify/react";
+import { clsx } from "clsx";
 
 const BillingSettings = () => {
+  const [billing, setBilling] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchBilling = async () => {
+      try {
+        const res = await fetch("/api/settings/billing");
+        const json = await res.json();
+        if (json.success) {
+          setBilling(json.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch billing info", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBilling();
+  }, []);
+
+  if (loading) {
+    return <div className="flex h-32 items-center justify-center">
+      <Icon icon="mingcute:loading-fill" className="animate-spin text-2xl text-blue-600" />
+    </div>;
+  }
+
+  const planName = billing?.plan === "pro" ? "Pro Plan" : billing?.plan === "enterprise" ? "Enterprise Plan" : "Free Plan";
+  const planColor = billing?.status === "active" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700";
+
   return (
     <div className="space-y-6">
       {/* Current Plan */}
@@ -11,10 +42,12 @@ const BillingSettings = () => {
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <h3 className="text-lg font-semibold text-gray-900">Current Plan</h3>
-            <p className="text-sm text-gray-500">You are currently on the <span className="font-medium text-gray-900">Pro Plan</span>.</p>
+            <p className="text-sm text-gray-500">You are currently on the <span className="font-medium text-gray-900 capitalize">{planName}</span>.</p>
           </div>
           <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 w-full md:w-auto">
-             <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700 shrink-0">Active</span>
+             <span className={clsx("rounded-full px-3 py-1 text-xs font-semibold capitalize shrink-0", planColor)}>
+                {billing?.status || "Active"}
+             </span>
              <button className="flex-1 sm:flex-none rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors whitespace-nowrap">
                 Cancel Plan
              </button>
@@ -34,11 +67,15 @@ const BillingSettings = () => {
             </div>
             <div className="rounded-lg bg-gray-50 p-4">
                 <p className="text-xs font-medium text-gray-500 uppercase">Next Payment</p>
-                <p className="mt-1 text-lg font-bold text-gray-900">Nov 24, 2024</p>
+                <p className="mt-1 text-lg font-bold text-gray-900">
+                  {billing?.renews_at ? new Date(billing.renews_at).toLocaleDateString() : "N/A"}
+                </p>
             </div>
             <div className="rounded-lg bg-gray-50 p-4">
                 <p className="text-xs font-medium text-gray-500 uppercase">Amount</p>
-                <p className="mt-1 text-lg font-bold text-gray-900">$29.00</p>
+                <p className="mt-1 text-lg font-bold text-gray-900">
+                  {billing?.plan === "pro" ? "$29.00" : billing?.plan === "enterprise" ? "$99.00" : "$0.00"}
+                </p>
             </div>
         </div>
       </div>

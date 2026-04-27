@@ -20,13 +20,21 @@ export function configureCloudinaryFromEnv() {
   return { ok: true };
 }
 
-export async function destroyCloudinaryImage(publicId) {
+const ALLOWED_DESTROY_RESOURCE_TYPES = new Set(["image", "video"]);
+
+/**
+ * Removes a Cloudinary asset by `public_id` (must live under {@link UPLOAD_FOLDER_PREFIX}).
+ * @param {"image" | "video"} resourceType
+ */
+export async function destroyCloudinaryAsset(publicId, resourceType = "image") {
   if (!publicId || typeof publicId !== "string" || !publicId.trim().startsWith(UPLOAD_FOLDER_PREFIX)) {
     throw new Error("Invalid or unauthorized public id.");
   }
   const id = publicId.trim();
+  const rt = ALLOWED_DESTROY_RESOURCE_TYPES.has(resourceType) ? resourceType : "image";
+
   const uploaderResult = await new Promise((resolve, reject) => {
-    cloudinary.uploader.destroy(id, { resource_type: "image", type: "upload", invalidate: true }, (err, res) => {
+    cloudinary.uploader.destroy(id, { resource_type: rt, type: "upload", invalidate: true }, (err, res) => {
       if (err) reject(err);
       else resolve(res);
     });
@@ -35,9 +43,8 @@ export async function destroyCloudinaryImage(publicId) {
     return uploaderResult;
   }
 
-  // Fallback via Admin API for cases where uploader destroy does not clear the asset.
   const adminResult = await cloudinary.api.delete_resources([id], {
-    resource_type: "image",
+    resource_type: rt,
     type: "upload",
     invalidate: true,
   });
@@ -46,4 +53,8 @@ export async function destroyCloudinaryImage(publicId) {
     return { result: deletedState };
   }
   throw new Error(`Cloudinary delete failed for ${id}.`);
+}
+
+export async function destroyCloudinaryImage(publicId) {
+  return destroyCloudinaryAsset(publicId, "image");
 }

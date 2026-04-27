@@ -85,6 +85,7 @@ const ProductFilterDropdown = ({ isOpen, onClose, anchorRef, onApply }) => {
                 <option value="Clothing">Clothing</option>
                 <option value="Accessories">Accessories</option>
                 <option value="Home & Garden">Home & Garden</option>
+                <option value="Video">Video</option>
             </select>
         </div>
 

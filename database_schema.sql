@@ -77,6 +77,7 @@ CREATE TABLE profiles (
   full_name TEXT,
   email TEXT,
   avatar_url TEXT,
+  phone TEXT,
   role user_role DEFAULT 'user',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
