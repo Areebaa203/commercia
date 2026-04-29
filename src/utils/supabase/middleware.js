@@ -57,6 +57,9 @@ export async function updateSession(request) {
 
   const isPublic =
     publicPaths.some((p) => pathname === p) ||
+    pathname === "/shop-all" ||
+    pathname === "/products" ||
+    pathname.startsWith("/products/") ||
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon");
