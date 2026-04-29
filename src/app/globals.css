@@ -119,3 +119,13 @@ input[type="search"].search-input::-webkit-search-cancel-button {
   -webkit-appearance: auto;
   cursor: pointer;
 }
+
+@layer utilities {
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}

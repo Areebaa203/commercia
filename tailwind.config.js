@@ -8,6 +8,18 @@ module.exports = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        "haven-serif": [
+          "var(--font-haven-serif)",
+          "ui-serif",
+          "Georgia",
+          "Cambria",
+          "serif",
+        ],
+        "home-heading": ["var(--font-home-heading)", "Georgia", "serif"],
+        "home-body": ["var(--font-home-body)", "system-ui", "sans-serif"],
+        "home-sub": ["var(--font-home-subheading)", "ui-monospace", "monospace"],
+      },
       colors: {
         border: "var(--border)",
         input: "var(--input)",

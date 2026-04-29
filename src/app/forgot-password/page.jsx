@@ -79,9 +79,9 @@ export default function ForgotPasswordPage() {
       <div className="flex w-full flex-col items-center justify-center bg-white p-8 lg:w-1/2">
         <div className="w-full max-w-md space-y-8">
           <div className="text-center lg:text-left">
-            <Link 
-              href="/" 
-              className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
+            <Link
+              href="/login"
+              className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-gray-500 transition-colors hover:text-gray-900"
             >
               <Icon icon="mingcute:arrow-left-line" className="text-lg" />
               Back to login
@@ -149,7 +149,7 @@ export default function ForgotPasswordPage() {
 
           <p className="text-center text-sm text-gray-500">
             Remember your password?{" "}
-            <Link href="/" className="font-bold text-blue-600 hover:text-blue-700 hover:underline">
+            <Link href="/login" className="font-bold text-blue-600 hover:text-blue-700 hover:underline">
               Sign in
             </Link>
           </p>

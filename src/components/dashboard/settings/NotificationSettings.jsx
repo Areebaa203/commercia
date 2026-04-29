@@ -104,7 +104,7 @@ const NotificationSettings = () => {
       <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
         <h3 className="mb-1 text-lg font-semibold text-gray-900">Email Notifications</h3>
         <p className="mb-4 text-sm text-gray-500">Manage what emails you receive from us.</p>
-        
+
         <div className="divide-y divide-gray-100">
           <Toggle
             label="Order Confirmation"
@@ -133,7 +133,7 @@ const NotificationSettings = () => {
       <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
         <h3 className="mb-1 text-lg font-semibold text-gray-900">Push Notifications</h3>
         <p className="mb-4 text-sm text-gray-500">Manage notifications on your desktop.</p>
-        
+
         <div className="divide-y divide-gray-100">
           <Toggle
             label="New Orders"
@@ -153,7 +153,7 @@ const NotificationSettings = () => {
       </div>
 
       <div className="flex justify-end">
-        <button 
+        <button
           onClick={handleSave}
           disabled={saving}
           className="flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-medium text-white shadow-sm shadow-blue-500/20 hover:bg-blue-700 transition-colors disabled:opacity-50"

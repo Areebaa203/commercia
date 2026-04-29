@@ -39,11 +39,20 @@ export async function updateSession(request) {
 
   const publicPaths = [
     "/",
+    "/login",
     "/register",
     "/forgot-password",
     "/verify-otp",
     "/reset-password",
     "/auth/callback",
+  ];
+
+  const authEntryPaths = [
+    "/login",
+    "/register",
+    "/forgot-password",
+    "/verify-otp",
+    "/reset-password",
   ];
 
   const isPublic =
@@ -54,16 +63,13 @@ export async function updateSession(request) {
 
   if (!isPublic && !user) {
     const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = "/";
+    redirectUrl.pathname = "/login";
     redirectUrl.searchParams.set("redirectTo", pathname);
     return NextResponse.redirect(redirectUrl);
   }
 
-  // Prevent authenticated users from visiting auth pages
-  if (user && publicPaths.includes(pathname) && pathname !== "/auth/callback") {
-    const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = "/dashboard";
-    return NextResponse.redirect(redirectUrl);
+  if (user && authEntryPaths.includes(pathname) && pathname !== "/auth/callback") {
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   return supabaseResponse;

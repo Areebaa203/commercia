@@ -1,0 +1,53 @@
+export const CATEGORIES = [
+  { id: "living", label: "Living room" },
+  { id: "bedroom", label: "Bedroom" },
+  { id: "bathroom", label: "Bathroom" },
+  { id: "dining", label: "Dining" },
+];
+
+export const PRODUCTS = [
+  {
+    id: "fluted-sofa",
+    slug: "fluted-sofa",
+    name: "Fluted Sofa",
+    image: "/pick-1.png",
+    price: 269.99,
+    compareAt: 299.99,
+    discount: 10,
+    reviews: 123,
+    category: "living",
+  },
+  {
+    id: "oak-side-table",
+    slug: "oak-side-table",
+    name: "Oak Side Table",
+    image: "/pick-2.png",
+    price: 129.99,
+    compareAt: 144.99,
+    discount: 10,
+    reviews: 123,
+    category: "living",
+  },
+  {
+    id: "fluted-couch",
+    slug: "fluted-couch",
+    name: "Fluted Couch",
+    image: "/pick-3.png",
+    price: 899.99,
+    compareAt: 999.99,
+    discount: 10,
+    reviews: 123,
+    category: "living",
+  },
+  {
+    id: "media-console",
+    slug: "media-console",
+    name: "Media Console",
+    image: "/pick-4.png",
+    price: 449.99,
+    compareAt: 499.99,
+    discount: 10,
+    reviews: 123,
+    category: "living",
+  },
+];
