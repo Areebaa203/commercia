@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Icon } from "@iconify/react";
 import AnnouncementBar from "./AnnouncementBar";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import CartDrawer from "@/components/cart/CartDrawer";
 
 const nav = [
   { label: "Shop all", href: "/shop-all" },
@@ -18,7 +20,9 @@ const nav = [
 export const SITE_HEADER_GUTTERS = "mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8";
 
 export default function SiteHeader() {
+  const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [cartOpen, setCartOpen] = useState(false);
 
   useEffect(() => {
     if (!menuOpen) return undefined;
@@ -53,7 +57,7 @@ export default function SiteHeader() {
             href="/"
             className="absolute left-1/2 flex h-[26px] w-[94px] -translate-x-1/2 shrink-0 items-center"
           >
-            <Image src="/logo.svg" alt="Haven" width={94} height={26} priority className="h-[26px] w-auto" />
+            <Image src="/furniqo-logo.svg" alt="Furniqo" width={115} height={32} priority className="h-[26px] w-auto" />
           </Link>
 
           <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
@@ -64,13 +68,14 @@ export default function SiteHeader() {
             >
               <Icon icon="mingcute:search-line" className="size-[1.375rem]" />
             </button>
-            <Link
-              href="/dashboard/orders"
+            <button
+              type="button"
+              onClick={() => setCartOpen(true)}
               className="rounded-full p-2.5 text-[#1a3021] transition hover:bg-black/[0.04]"
               aria-label="Cart"
             >
               <Icon icon="mingcute:shopping-bag-3-line" className="size-[1.375rem]" />
-            </Link>
+            </button>
           </div>
         </div>
 
@@ -79,20 +84,29 @@ export default function SiteHeader() {
           className={`${SITE_HEADER_GUTTERS} hidden h-[72px] items-center gap-3 py-4 sm:gap-4 lg:flex lg:gap-6`}
         >
           <Link href="/" className="flex h-[24px] w-[87px] shrink-0 items-center">
-            <Image src="/logo.svg" alt="Haven Logo" width={87} height={24} priority />
+            <Image src="/furniqo-logo.svg" alt="Furniqo Logo" width={115} height={32} priority />
           </Link>
 
           <nav className="font-home-sub min-w-0 flex-1" aria-label="Main">
             <div className="mx-auto flex max-w-[min(26rem,100%)] flex-wrap items-center justify-center gap-x-6 gap-y-1 text-[11px] font-medium uppercase tracking-[0.14em] text-[#3d4a42] lg:max-w-[28rem] lg:gap-x-10 lg:text-xs">
-              {nav.map((item) => (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  className="whitespace-nowrap transition-colors hover:text-[#1a3d2e]"
-                >
-                  {item.label}
-                </Link>
-              ))}
+              {nav.map((item) => {
+                const isActive = pathname === item.href || (item.href !== "/" && pathname?.startsWith(item.href));
+                return (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    className={cn(
+                      "relative whitespace-nowrap transition-colors hover:text-[#1a3d2e]",
+                      isActive ? "text-[#1a3d2e] font-semibold" : "text-[#3d4a42]"
+                    )}
+                  >
+                    {item.label}
+                    {isActive && (
+                      <span className="absolute -bottom-1 left-0 h-0.5 w-full bg-[#1a3d2e]" />
+                    )}
+                  </Link>
+                );
+              })}
             </div>
           </nav>
 
@@ -111,13 +125,14 @@ export default function SiteHeader() {
             >
               <Icon icon="mingcute:user-3-line" className="size-5 sm:size-6" />
             </Link>
-            <Link
-              href="/dashboard/orders"
+            <button
+              type="button"
+              onClick={() => setCartOpen(true)}
               className="rounded-full p-2 text-[#3d4a42] transition-colors hover:bg-black/5 hover:text-[#1a3d2e]"
               aria-label="Cart"
             >
               <Icon icon="mingcute:shopping-bag-3-line" className="size-5 sm:size-6" />
-            </Link>
+            </button>
           </div>
         </div>
       </div>
@@ -158,17 +173,23 @@ export default function SiteHeader() {
             </button>
           </div>
           <ul className="flex flex-1 flex-col gap-0 overflow-y-auto py-2">
-            {nav.map((item) => (
-              <li key={item.label}>
-                <Link
-                  href={item.href}
-                  onClick={() => setMenuOpen(false)}
-                  className="font-home-body block px-5 py-3.5 text-[15px] font-medium text-[#1a3021] transition hover:bg-[#f0ede6]"
-                >
-                  {item.label}
-                </Link>
-              </li>
-            ))}
+            {nav.map((item) => {
+              const isActive = pathname === item.href || (item.href !== "/" && pathname?.startsWith(item.href));
+              return (
+                <li key={item.label}>
+                  <Link
+                    href={item.href}
+                    onClick={() => setMenuOpen(false)}
+                    className={cn(
+                      "font-home-body block px-5 py-3.5 text-[15px] font-medium transition",
+                      isActive ? "bg-[#f0ede6] text-[#1a3021]" : "text-[#1a3021] hover:bg-[#f0ede6]"
+                    )}
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              );
+            })}
             <li className="mt-auto border-t border-[#e8e9df] pt-2">
               <Link
                 href="/login"
@@ -182,6 +203,9 @@ export default function SiteHeader() {
           </ul>
         </nav>
       </div>
+
+      {/* Cart drawer */}
+      <CartDrawer open={cartOpen} onOpenChange={setCartOpen} />
     </header>
   );
 }

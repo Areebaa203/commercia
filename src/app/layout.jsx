@@ -9,7 +9,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
-const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-haven-serif" });
+const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-furniqo-serif" });
 
 const instrumentSerif = Instrument_Serif({
   subsets: ["latin"],
@@ -33,8 +33,15 @@ const fragmentMono = Fragment_Mono({
 });
 
 export const metadata = {
-  title: "Commercia - Store & Dashboard",
+  title: "Furniqo - Store & Dashboard",
   description: "Modern e-commerce and store management",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/furniqo-logo.svg", type: "image/svg+xml" },
+    ],
+    apple: "/furniqo-logo.svg",
+  },
 };
 
 import { Toaster } from "@/components/ui/toaster";

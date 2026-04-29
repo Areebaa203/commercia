@@ -6,8 +6,8 @@ export async function generateMetadata({ params }) {
   const { slug } = await params;
   const p = resolveStorefrontProduct(slug);
   return {
-    title: p ? `${p.name} · Haven` : "Product",
-    description: p ? `Shop ${p.name} at Haven.` : undefined,
+    title: p ? `${p.name} · Furniqo` : "Product",
+    description: p ? `Shop ${p.name} at Furniqo.` : undefined,
   };
 }
 

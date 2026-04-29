@@ -27,7 +27,7 @@ export const FOOTER_LEGAL_LINKS = [
 export const FOOTER_SOCIAL = [
   {
     label: "Instagram",
-    href: "https://www.instagram.com/haven_furniture/",
+    href: "https://www.instagram.com/furniqo_furniture/",
     icon: "mdi:instagram",
   },
   { label: "Facebook", href: "#", icon: "mdi:facebook" },

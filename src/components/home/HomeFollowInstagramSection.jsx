@@ -77,7 +77,7 @@ export default function HomeFollowInstagramSection() {
         </h2>
         <p className="mt-1.5 font-home-body text-sm text-[#363d3b] sm:mt-2 sm:text-base">
           <a
-            href="https://www.instagram.com/haven_furniture/"
+            href="https://www.instagram.com/furniqo_furniture/"
             target="_blank"
             rel="noopener noreferrer"
             className="font-medium text-[#2D3E33] underline-offset-2 hover:underline"

@@ -15,7 +15,7 @@ import {
 const BG = "#FDFBF7";
 const BTN_GREEN = "#2F3E33";
 
-function HavenWordmark({ className }) {
+function FurniqoWordmark({ className }) {
   return (
     <span
       className={cn(
@@ -23,7 +23,7 @@ function HavenWordmark({ className }) {
         className
       )}
     >
-      HAVEN
+      FURNIQO
       <span className="align-super text-[0.42em] font-normal leading-none tracking-normal">®</span>
     </span>
   );
@@ -146,8 +146,8 @@ export default function SiteFooter() {
       <div className="relative z-10 mx-auto max-w-7xl px-4 pb-10 pt-8 sm:px-6 sm:pb-12 sm:pt-12 lg:px-8 lg:pb-14 lg:pt-16">
         <div className="grid grid-cols-1 gap-0 md:grid-cols-12 md:gap-10 lg:gap-14">
           <div className="max-w-xl md:col-span-5 lg:col-span-4">
-            <Link href="/" className="inline-block" aria-label="Haven Home">
-              <HavenWordmark className="text-[2rem] tracking-[0.2em] sm:text-[2.35rem]" />
+            <Link href="/" className="inline-block" aria-label="Furniqo Home">
+              <FurniqoWordmark className="text-[2rem] tracking-[0.2em] sm:text-[2.35rem]" />
             </Link>
             <div className="mt-5 flex items-center gap-5">
               {FOOTER_SOCIAL.map((s) => (
@@ -187,7 +187,7 @@ export default function SiteFooter() {
           <p
             className="text-center font-home-heading font-light leading-none tracking-[0.12em] text-[#2D3E33]/[0.15] text-[min(3.2rem,14vw)] sm:text-[min(4.5rem,13vw)] md:text-[6.5rem] lg:text-[7.5rem]"
           >
-            HAVEN
+            FURNIQO
             <span className="align-super text-[0.38em]">®</span>
           </p>
         </div>
@@ -195,7 +195,7 @@ export default function SiteFooter() {
         <div className="mt-10 border-t border-neutral-300/70 pt-6 sm:mt-12">
           <div className="flex flex-col-reverse items-center justify-between gap-6 sm:flex-row">
             <p className="font-home-body text-xs text-neutral-600">
-              © Haven {year}
+              © Furniqo {year}
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3 opacity-[0.92] sm:justify-end">
               <Icon icon="logos:visa" className="h-6 w-10" aria-hidden />

@@ -9,8 +9,8 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        "haven-serif": [
-          "var(--font-haven-serif)",
+        "furniqo-serif": [
+          "var(--font-furniqo-serif)",
           "ui-serif",
           "Georgia",
           "Cambria",

@@ -41,7 +41,7 @@ const SLIDES = [
     id: "3",
     author: "Marcus T.",
     quote:
-      "Minimal assembly, sturdy build, and it fits perfectly in our reading nook. Haven has become our go-to for furniture.",
+      "Minimal assembly, sturdy build, and it fits perfectly in our reading nook. Furniqo has become our go-to for furniture.",
     lifestyleImage: "/coffee-tables-img.jpg",
     product: {
       name: "Oak Side Table",

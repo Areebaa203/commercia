@@ -5,8 +5,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { Icon } from "@iconify/react";
 import { cn } from "@/lib/utils";
-import SiteHeader from "@/components/home/SiteHeader";
-import SiteFooter from "@/components/home/SiteFooter";
 import { DEAL_PROMO } from "@/components/home/dealsOfTheWeekData";
 import {
   ALL_SHOP_PRODUCTS,
@@ -459,124 +457,120 @@ export default function ShopAllView() {
   );
 
   return (
-    <div className="min-h-screen bg-[#f7f4ef] font-home-body antialiased">
-      <SiteHeader />
-      <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
-        <div className="mb-6 sm:mb-8">
-          <p className="font-home-sub text-[11px] uppercase tracking-[0.14em] text-[#6b7368]">Home / Shop all</p>
-          <h1 className="font-home-heading mt-1 text-4xl leading-none text-[#1a3021] sm:text-5xl">Shop all</h1>
+    <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+      <div className="mb-6 sm:mb-8">
+        <p className="font-home-sub text-[11px] uppercase tracking-[0.14em] text-[#6b7368]">Home / Shop all</p>
+        <h1 className="font-home-heading mt-1 text-4xl leading-none text-[#1a3021] sm:text-5xl">Shop all</h1>
+      </div>
+
+      <div className="mb-5 flex flex-col gap-4 sm:mb-6 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((o) => !o)}
+            className="font-home-sub inline-flex items-center gap-2 rounded-sm border border-[#d6d0c5] bg-[#f2efe8] px-4 py-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#1a3021] transition hover:bg-[#e8e2d8]"
+          >
+            <Icon icon="mingcute:equalizer-fill" className="size-4 rotate-90" />
+            {filtersOpen ? "HIDE FILTER" : "SHOW FILTER"} ({activeFilterCount})
+          </button>
+          {filtersOpen ? (
+            <button type="button" onClick={resetAll} className="hidden text-xs font-semibold uppercase tracking-wide text-[#1a3021] underline underline-offset-2 sm:inline lg:hidden">
+              Reset all
+            </button>
+          ) : null}
+          <span className="text-sm text-[#566157]">{filteredSorted.length} results</span>
         </div>
 
-        <div className="mb-5 flex flex-col gap-4 sm:mb-6 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+        <div className="flex w-full flex-col gap-1 sm:w-auto sm:min-w-[200px]">
+          <label htmlFor="shop-sort" className="text-[10px] font-medium uppercase tracking-wide text-[#6b7368]">
+            Sort by
+          </label>
+          <div className="relative">
+            <select
+              id="shop-sort"
+              value={sortId}
+              onChange={(e) => setSortId(e.target.value)}
+              className="font-home-sub w-full appearance-none rounded-sm border border-[#d6d0c5] bg-white py-2.5 pl-3 pr-9 text-xs font-semibold text-[#1a3021]"
+            >
+              {SORT_OPTIONS.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+            <Icon
+              icon="mingcute:down-line"
+              className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-neutral-500"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div
+        className={cn(
+          "flex gap-8 lg:gap-10",
+          filtersOpen ? "lg:grid lg:grid-cols-[260px,minmax(0,1fr)]" : ""
+        )}
+      >
+        {filtersOpen && isLgUp ? (
+          <aside className="w-[260px] shrink-0">{renderFiltersPanel(false)}</aside>
+        ) : null}
+
+        {filtersOpen && !isLgUp ? (
+          <>
             <button
               type="button"
-              onClick={() => setFiltersOpen((o) => !o)}
-              className="font-home-sub inline-flex items-center gap-2 rounded-sm border border-[#d6d0c5] bg-[#f2efe8] px-4 py-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#1a3021] transition hover:bg-[#e8e2d8]"
-            >
-              <Icon icon="mingcute:equalizer-fill" className="size-4 rotate-90" />
-              {filtersOpen ? "HIDE FILTER" : "SHOW FILTER"} ({activeFilterCount})
-            </button>
-            {filtersOpen ? (
-              <button type="button" onClick={resetAll} className="hidden text-xs font-semibold uppercase tracking-wide text-[#1a3021] underline underline-offset-2 sm:inline lg:hidden">
+              className="fixed inset-0 z-40 bg-black/35"
+              aria-label="Close filters overlay"
+              onClick={() => setFiltersOpen(false)}
+            />
+            <aside className="fixed inset-y-0 left-0 z-50 flex w-[min(100%,380px)] flex-col bg-[#f7f4ef] shadow-2xl">
+              {renderFiltersPanel(true)}
+            </aside>
+          </>
+        ) : null}
+
+        <section className={cn("min-w-0 flex-1", filtersOpen ? "lg:max-w-none" : "w-full")}>
+          {filteredSorted.length === 0 ? (
+            <p className="rounded-sm border border-dashed border-[#d6d0c5] bg-[#f4f1ea]/80 px-6 py-16 text-center text-sm text-neutral-600">
+              No products match these filters.&nbsp;
+              <button type="button" className="font-semibold text-[#1a3021] underline" onClick={resetAll}>
                 Reset all
               </button>
-            ) : null}
-            <span className="text-sm text-[#566157]">{filteredSorted.length} results</span>
-          </div>
-
-          <div className="flex w-full flex-col gap-1 sm:w-auto sm:min-w-[200px]">
-            <label htmlFor="shop-sort" className="text-[10px] font-medium uppercase tracking-wide text-[#6b7368]">
-              Sort by
-            </label>
-            <div className="relative">
-              <select
-                id="shop-sort"
-                value={sortId}
-                onChange={(e) => setSortId(e.target.value)}
-                className="font-home-sub w-full appearance-none rounded-sm border border-[#d6d0c5] bg-white py-2.5 pl-3 pr-9 text-xs font-semibold text-[#1a3021]"
-              >
-                {SORT_OPTIONS.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-              <Icon
-                icon="mingcute:down-line"
-                className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-neutral-500"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div
-          className={cn(
-            "flex gap-8 lg:gap-10",
-            filtersOpen ? "lg:grid lg:grid-cols-[260px,minmax(0,1fr)]" : ""
+            </p>
+          ) : (
+            <ul
+              className={cn(
+                "grid list-none gap-3 sm:grid-cols-2 sm:gap-4",
+                filtersOpen ? "lg:grid-cols-3 lg:gap-5" : "lg:grid-cols-3 lg:gap-5 xl:grid-cols-4"
+              )}
+            >
+              {gridItems.map((item) =>
+                item.kind === "promo" ? (
+                  <li key="promo" className="min-w-0">
+                    <PromoCard />
+                  </li>
+                ) : (
+                  <li key={item.product.id} className="min-w-0">
+                    <ProductCard product={item.product} />
+                  </li>
+                )
+              )}
+            </ul>
           )}
-        >
-          {filtersOpen && isLgUp ? (
-            <aside className="w-[260px] shrink-0">{renderFiltersPanel(false)}</aside>
-          ) : null}
 
-          {filtersOpen && !isLgUp ? (
-            <>
+          {filteredSorted.length > 0 ? (
+            <div className="mt-8 flex justify-center">
               <button
                 type="button"
-                className="fixed inset-0 z-40 bg-black/35"
-                aria-label="Close filters overlay"
-                onClick={() => setFiltersOpen(false)}
-              />
-              <aside className="fixed inset-y-0 left-0 z-50 flex w-[min(100%,380px)] flex-col bg-[#f7f4ef] shadow-2xl">
-                {renderFiltersPanel(true)}
-              </aside>
-            </>
-          ) : null}
-
-          <section className={cn("min-w-0 flex-1", filtersOpen ? "lg:max-w-none" : "w-full")}>
-            {filteredSorted.length === 0 ? (
-              <p className="rounded-sm border border-dashed border-[#d6d0c5] bg-[#f4f1ea]/80 px-6 py-16 text-center text-sm text-neutral-600">
-                No products match these filters.&nbsp;
-                <button type="button" className="font-semibold text-[#1a3021] underline" onClick={resetAll}>
-                  Reset all
-                </button>
-              </p>
-            ) : (
-              <ul
-                className={cn(
-                  "grid list-none gap-3 sm:grid-cols-2 sm:gap-4",
-                  filtersOpen ? "lg:grid-cols-3 lg:gap-5" : "lg:grid-cols-3 lg:gap-5 xl:grid-cols-4"
-                )}
+                className="font-home-sub inline-flex items-center justify-center rounded-sm border border-[#d6d0c5] bg-[#f8f4ec] px-8 py-2.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#1a3021] hover:bg-[#efe8dc]"
               >
-                {gridItems.map((item) =>
-                  item.kind === "promo" ? (
-                    <li key="promo" className="min-w-0">
-                      <PromoCard />
-                    </li>
-                  ) : (
-                    <li key={item.product.id} className="min-w-0">
-                      <ProductCard product={item.product} />
-                    </li>
-                  )
-                )}
-              </ul>
-            )}
-
-            {filteredSorted.length > 0 ? (
-              <div className="mt-8 flex justify-center">
-                <button
-                  type="button"
-                  className="font-home-sub inline-flex items-center justify-center rounded-sm border border-[#d6d0c5] bg-[#f8f4ec] px-8 py-2.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#1a3021] hover:bg-[#efe8dc]"
-                >
-                  Show more
-                </button>
-              </div>
-            ) : null}
-          </section>
-        </div>
-      </main>
-      <SiteFooter />
-    </div>
+                Show more
+              </button>
+            </div>
+          ) : null}
+        </section>
+      </div>
+    </main>
   );
 }

@@ -5,8 +5,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { Icon } from "@iconify/react";
 import { cn } from "@/lib/utils";
-import SiteHeader from "@/components/home/SiteHeader";
-import SiteFooter from "@/components/home/SiteFooter";
 import ValuePropsBand from "@/components/home/ValuePropsBand";
 import { VALUE_PROPS } from "@/components/home/homeValuePropsData";
 import { ALL_SHOP_PRODUCTS } from "@/components/shop-all/shopAllData";
@@ -66,8 +64,7 @@ export default function ProductDetailView({ product }) {
   const gallery = product.gallery?.length ? product.gallery : [product.image];
 
   return (
-    <div className="min-h-screen bg-[#f7f4ef] font-home-body antialiased">
-      <SiteHeader />
+    <>
       <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
         <nav className="font-home-sub mb-8 text-[11px] uppercase tracking-[0.12em] text-[#6b7368]" aria-label="Breadcrumb">
           <ol className="flex flex-wrap items-center gap-1">
@@ -332,9 +329,7 @@ export default function ProductDetailView({ product }) {
       <ProductYouMayAlsoLike excludeSlug={product.slug} />
 
       <ProductCustomerReviews reviewTotal={product.reviews} />
-
-      <SiteFooter />
-    </div>
+    </>
   );
 }
 

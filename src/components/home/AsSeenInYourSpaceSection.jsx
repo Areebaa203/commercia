@@ -129,7 +129,7 @@ export default function AsSeenInYourSpaceSection() {
             As seen in your space
           </h2>
           <p className="mt-3 font-home-body text-sm leading-relaxed text-[#363d3b] sm:text-base md:leading-relaxed">
-            See how our customers bring Haven pieces into their homes
+            See how our customers bring Furniqo pieces into their homes
           </p>
           <Link
             href="/shop-all"

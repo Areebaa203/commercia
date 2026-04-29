@@ -56,7 +56,7 @@ const Sidebar = () => {
             <Icon icon="mingcute:shopping-bag-2-fill" width="20" />
           </div>
           <span className={clsx("text-xl font-bold text-gray-900 whitespace-nowrap overflow-hidden", isCollapsed && "lg:hidden")}>
-            Commercia
+            Furniqo
           </span>
           
           {/* Mobile Close Button */}
