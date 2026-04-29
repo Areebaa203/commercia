@@ -52,7 +52,7 @@ export default function RegisterPage() {
       description: "Account created successfully.",
     });
 
-    router.push("/");
+    router.push("/dashboard");
   };
 
   return (

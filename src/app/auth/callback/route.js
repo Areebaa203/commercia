@@ -4,7 +4,7 @@ import { createClient } from "@/utils/supabase/server";
 export async function GET(request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
-  const next = requestUrl.searchParams.get("next") ?? "/";
+  const next = requestUrl.searchParams.get("next") ?? "/dashboard";
   const error = requestUrl.searchParams.get("error");
   const errorDescription = requestUrl.searchParams.get("error_description");
   // /auth/callback?error=access_denied&error_description=User+canceled
@@ -38,6 +38,6 @@ export async function GET(request) {
     return NextResponse.redirect(loginUrl);
   }
 
-  const safeNext = next.startsWith("/") ? next : "/";
+  const safeNext = next.startsWith("/") ? next : "/dashboard";
   return NextResponse.redirect(new URL(safeNext, origin));
 }

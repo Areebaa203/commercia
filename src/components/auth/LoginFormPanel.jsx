@@ -9,10 +9,11 @@ import { Icon } from "@iconify/react";
 import { signInSchema } from "@/lib/validations/auth";
 import { createClient } from "@/utils/supabase/client";
 
+const POST_AUTH_PATH = "/dashboard";
+
 export default function LoginFormPanel() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirectTo") ?? "/";
 
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState("");
@@ -52,7 +53,7 @@ export default function LoginFormPanel() {
       return;
     }
 
-    router.push(redirectTo);
+    router.push(POST_AUTH_PATH);
     router.refresh();
   };
 
@@ -67,7 +68,7 @@ export default function LoginFormPanel() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
+          redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(POST_AUTH_PATH)}`,
         },
       });
 

@@ -42,7 +42,7 @@ export default function ResetPasswordPage() {
 
     setSuccessMsg(json.message);
     setTimeout(() => {
-      router.push("/");
+      router.push("/dashboard");
     }, 2000);
   };
 

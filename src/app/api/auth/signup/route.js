@@ -31,8 +31,8 @@ export async function POST(request) {
       password,
       options: {
         data: { full_name: fullName },
-        // After email confirmation Supabase will redirect to /auth/callback
-        emailRedirectTo: `${requestUrl.origin}/auth/callback`,
+        // After email confirmation Supabase redirects to /auth/callback → dashboard
+        emailRedirectTo: `${requestUrl.origin}/auth/callback?next=/dashboard`,
       },
     });
 
