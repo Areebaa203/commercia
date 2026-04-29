@@ -37,10 +37,13 @@ export const metadata = {
   description: "Modern e-commerce and store management",
   icons: {
     icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: "/furniqo-logo.svg", type: "image/svg+xml" },
+      {
+        url: "/favicon.ico",
+        type: "image/x-icon",
+      },
     ],
-    apple: "/furniqo-logo.svg",
+    shortcut: "/favicon.ico",
+    apple: "/favicon.ico",
   },
 };
 

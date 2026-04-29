@@ -54,7 +54,7 @@ export default function ResetPasswordPage() {
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
             <Icon icon="mingcute:shopping-bag-2-fill" width="24" />
           </div>
-          <span className="text-2xl font-bold tracking-tight">Commercia</span>
+          <span className="text-2xl font-bold tracking-tight">Furniqo</span>
         </div>
 
         <div className="z-10 max-w-md space-y-6">
@@ -67,7 +67,7 @@ export default function ResetPasswordPage() {
         </div>
 
         <div className="z-10 flex items-center justify-between text-sm text-blue-200">
-          <p>© 2024 Commercia Inc.</p>
+          <p>© 2026 Furniqo Inc.</p>
           <div className="flex gap-6">
             <a href="#" className="hover:text-white transition-colors">Terms</a>
             <a href="#" className="hover:text-white transition-colors">Privacy</a>

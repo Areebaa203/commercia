@@ -6,7 +6,7 @@ import ThemePreviewCard from "@/components/dashboard/store/ThemePreviewCard";
 
 // Mock Data
 const themes = [
-  { id: 1, name: "Modern Minimal", version: "2.1.0", author: "Commercia Inc.", description: "A clean and modern theme designed for lifestyle and fashion brands. Features large imagery and elegant typography.", thumbnail: "https://images.unsplash.com/photo-1769257911527-bdfd73b545cf?q=80&w=600&auto=format&fit=crop", updatedAt: "2 days ago" },
+  { id: 1, name: "Modern Minimal", version: "2.1.0", author: "Furniqo Inc.", description: "A clean and modern theme designed for lifestyle and fashion brands. Features large imagery and elegant typography.", thumbnail: "https://images.unsplash.com/photo-1769257911527-bdfd73b545cf?q=80&w=600&auto=format&fit=crop", updatedAt: "2 days ago" },
   { id: 2, name: "Classic Shop", version: "1.5.3", author: "PixelPerfect", description: "The classic ecommerce layout optimized for high conversion rates. Perfect for large catalogs.", thumbnail: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=600&auto=format&fit=crop", updatedAt: "1 week ago" },
   { id: 3, name: "Tech Pro", version: "3.0.1", author: "DevStudio", description: "Designed specifically for electronics and gadgets. Dark mode support and technical specs focused.", thumbnail: "https://images.unsplash.com/photo-1550009158-9ebf69173e03?q=80&w=600&auto=format&fit=crop", updatedAt: "3 weeks ago" },
 ];
