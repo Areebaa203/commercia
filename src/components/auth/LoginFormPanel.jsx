@@ -8,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Icon } from "@iconify/react";
 import { signInSchema } from "@/lib/validations/auth";
 import { createClient } from "@/utils/supabase/client";
+import { authRedirectUrl } from "@/utils/site-url";
 
 const POST_AUTH_PATH = "/dashboard";
 
@@ -62,13 +63,12 @@ export default function LoginFormPanel() {
       setServerError("");
       setGoogleLoading(true);
 
-      const origin =
-        typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
-
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(POST_AUTH_PATH)}`,
+          redirectTo: authRedirectUrl(
+            `/auth/callback?next=${encodeURIComponent(POST_AUTH_PATH)}`
+          ),
         },
       });
 

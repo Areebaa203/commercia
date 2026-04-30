@@ -113,7 +113,7 @@ export default function HomeJournalSection() {
             </p>
           </div>
           <Link
-            href="#"
+            href="/journal"
             className="font-home-sub flex h-11 w-full shrink-0 items-center justify-center rounded-[4px] px-5 text-[10px] font-semibold uppercase tracking-[0.14em] text-white transition hover:opacity-90 sm:h-10 sm:w-auto sm:text-xs"
             style={{ backgroundColor: GREEN }}
           >

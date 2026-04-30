@@ -8,10 +8,11 @@ import AnnouncementBar from "./AnnouncementBar";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import CartDrawer from "@/components/cart/CartDrawer";
+import { useCart } from "@/contexts/CartContext";
 
 const nav = [
   { label: "Shop all", href: "/shop-all" },
-  { label: "Journal", href: "#" },
+  { label: "Journal", href: "/journal" },
   { label: "About", href: "#" },
   { label: "Contact", href: "#" },
 ];
@@ -22,7 +23,7 @@ export const SITE_HEADER_GUTTERS = "mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-
 export default function SiteHeader() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [cartOpen, setCartOpen] = useState(false);
+  const { setCartOpen, totalQty } = useCart();
 
   useEffect(() => {
     if (!menuOpen) return undefined;
@@ -71,10 +72,15 @@ export default function SiteHeader() {
             <button
               type="button"
               onClick={() => setCartOpen(true)}
-              className="rounded-full p-2.5 text-[#1a3021] transition hover:bg-black/[0.04]"
-              aria-label="Cart"
+              className="relative rounded-full p-2.5 text-[#1a3021] transition hover:bg-black/[0.04]"
+              aria-label={totalQty > 0 ? `Cart, ${totalQty} items` : "Cart"}
             >
               <Icon icon="mingcute:shopping-bag-3-line" className="size-[1.375rem]" />
+              {totalQty > 0 ? (
+                <span className="absolute right-1 top-1 flex min-w-[1rem] items-center justify-center rounded-full bg-[#24352d] px-1 text-[9px] font-bold tabular-nums text-white">
+                  {totalQty > 99 ? "99+" : totalQty}
+                </span>
+              ) : null}
             </button>
           </div>
         </div>
@@ -128,10 +134,15 @@ export default function SiteHeader() {
             <button
               type="button"
               onClick={() => setCartOpen(true)}
-              className="rounded-full p-2 text-[#3d4a42] transition-colors hover:bg-black/5 hover:text-[#1a3d2e]"
-              aria-label="Cart"
+              className="relative rounded-full p-2 text-[#3d4a42] transition-colors hover:bg-black/5 hover:text-[#1a3d2e]"
+              aria-label={totalQty > 0 ? `Cart, ${totalQty} items` : "Cart"}
             >
               <Icon icon="mingcute:shopping-bag-3-line" className="size-5 sm:size-6" />
+              {totalQty > 0 ? (
+                <span className="absolute right-0 top-0 flex size-[18px] items-center justify-center rounded-full bg-[#24352d] text-[10px] font-bold tabular-nums text-white sm:size-5 sm:text-[11px]">
+                  {totalQty > 99 ? "99+" : totalQty}
+                </span>
+              ) : null}
             </button>
           </div>
         </div>
@@ -205,7 +216,7 @@ export default function SiteHeader() {
       </div>
 
       {/* Cart drawer */}
-      <CartDrawer open={cartOpen} onOpenChange={setCartOpen} />
+      <CartDrawer />
     </header>
   );
 }

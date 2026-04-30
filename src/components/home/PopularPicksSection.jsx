@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Icon } from "@iconify/react";
 import { CATEGORIES, PRODUCTS } from "@/components/home/popularPicksData";
+import { useCart } from "@/contexts/CartContext";
 
 const BG = "#F9F7F0";
 const FOREST = "#2D3E33";
@@ -17,6 +18,7 @@ function formatPrice(n) {
 }
 
 function ProductCard({ product }) {
+  const { addItem } = useCart();
   const href = `/products/${product.slug}`;
   return (
     <article className="flex h-full flex-col text-left">
@@ -71,6 +73,16 @@ function ProductCard({ product }) {
         type="button"
         className="font-home-sub mt-3 w-full border border-[#d4cfc3] bg-[#f4f0ea] py-2 text-[9px] font-semibold uppercase tracking-[0.14em] transition hover:bg-[#ebe5da] sm:mt-3.5 sm:py-2.5 sm:text-[10px]"
         style={{ color: FOREST, borderRadius: "2px" }}
+        onClick={() =>
+          addItem({
+            slug: product.slug,
+            name: product.name,
+            image: product.image,
+            price: product.price,
+            compareAt: product.compareAt,
+            qty: 1,
+          })
+        }
       >
         Add to cart
       </button>

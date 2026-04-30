@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { signUpSchema } from "@/lib/validations/auth";
+import { authRedirectUrl } from "@/utils/site-url";
 
 /**
  * POST /api/auth/signup
@@ -21,7 +22,6 @@ export async function POST(request) {
     }
 
     const { fullName, email, password } = result.data;
-    const requestUrl = new URL(request.url);
 
     // ── 2. Create Supabase client & call signUp ───────────────────────────
     const supabase = await createClient();
@@ -32,7 +32,7 @@ export async function POST(request) {
       options: {
         data: { full_name: fullName },
         // After email confirmation Supabase redirects to /auth/callback → dashboard
-        emailRedirectTo: `${requestUrl.origin}/auth/callback?next=/dashboard`,
+        emailRedirectTo: authRedirectUrl("/auth/callback?next=/dashboard", request),
       },
     });
 

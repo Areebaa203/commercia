@@ -15,6 +15,7 @@ import {
   ROOM_OPTIONS,
   SORT_OPTIONS,
 } from "@/components/shop-all/shopAllData";
+import { useCart } from "@/contexts/CartContext";
 
 const MEDIA_LG_MIN = "(min-width: 1024px)";
 
@@ -37,6 +38,7 @@ function formatPrice(n) {
 }
 
 function ProductCard({ product }) {
+  const { addItem } = useCart();
   return (
     <article className="flex h-full flex-col rounded-sm border border-[#e8e3d9] bg-[#f4f1ea] p-3 text-center sm:p-4">
       <Link href={`/products/${product.slug}`} className="block">
@@ -69,6 +71,16 @@ function ProductCard({ product }) {
       <button
         type="button"
         className="font-home-sub mt-auto w-full border border-neutral-300/90 bg-[#f7f3ec] py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-800 transition hover:bg-[#ece7de]"
+        onClick={() =>
+          addItem({
+            slug: product.slug,
+            name: product.name,
+            image: product.image,
+            price: product.price,
+            compareAt: product.compareAt,
+            qty: 1,
+          })
+        }
       >
         Add to cart
       </button>

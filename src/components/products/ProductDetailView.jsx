@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Icon } from "@iconify/react";
 import { cn } from "@/lib/utils";
+import { useCart } from "@/contexts/CartContext";
 import ValuePropsBand from "@/components/home/ValuePropsBand";
 import { VALUE_PROPS } from "@/components/home/homeValuePropsData";
 import { ALL_SHOP_PRODUCTS } from "@/components/shop-all/shopAllData";
@@ -38,6 +39,7 @@ function formatPrice(n) {
 }
 
 export default function ProductDetailView({ product }) {
+  const { addItem } = useCart();
   const [slide, setSlide] = useState(0);
   const [qty, setQty] = useState(1);
   const [delivery, setDelivery] = useState("ship");
@@ -62,6 +64,21 @@ export default function ProductDetailView({ product }) {
   const mins = Math.floor((remaining % 3600000) / 60000);
 
   const gallery = product.gallery?.length ? product.gallery : [product.image];
+
+  const selectedColor = product.colorOptions.find((c) => c.id === colorId) ?? product.colorOptions[0];
+  const cartImage = selectedColor?.thumb ?? product.image;
+
+  const handleAddToCart = () => {
+    addItem({
+      slug: product.slug,
+      name: product.name,
+      image: cartImage,
+      price: product.price,
+      compareAt: product.compareAt,
+      variantLabel: `Color: ${selectedColor?.label ?? "Cream"}`,
+      qty,
+    });
+  };
 
   return (
     <>
@@ -259,6 +276,7 @@ export default function ProductDetailView({ product }) {
               </div>
               <button
                 type="button"
+                onClick={handleAddToCart}
                 className="font-home-sub h-[3rem] w-full shrink-0 rounded-sm bg-[#24352d] px-10 text-[11px] font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-[#1e2c26] sm:flex-1"
               >
                 Add to cart
@@ -390,6 +408,7 @@ function ProductWhyLoveIt({ lifestyleSrc }) {
 }
 
 function ProductYouMayAlsoLike({ excludeSlug }) {
+  const { addItem } = useCart();
   const scrollerRef = useRef(null);
   const [progress, setProgress] = useState(0);
 
@@ -469,6 +488,17 @@ function ProductYouMayAlsoLike({ excludeSlug }) {
                 <button
                   type="button"
                   className="font-home-sub mt-3 w-full border border-neutral-300/90 bg-[#f7f3ec] py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-800 transition hover:bg-[#ece7de]"
+                  onClick={() =>
+                    addItem({
+                      slug: p.slug,
+                      name: p.name,
+                      image: p.image,
+                      price: p.price,
+                      compareAt: p.compareAt,
+                      variantLabel: null,
+                      qty: 1,
+                    })
+                  }
                 >
                   Add to cart
                 </button>
