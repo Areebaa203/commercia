@@ -128,6 +128,8 @@ export default function CheckoutReviewView() {
   const {
     register,
     handleSubmit,
+    setValue,
+    getValues,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(checkoutSchema),
@@ -148,6 +150,52 @@ export default function CheckoutReviewView() {
   React.useEffect(() => {
     setMounted(true);
   }, []);
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    async function prefillFromAccount() {
+      try {
+        const supabase = createClient();
+        const { data } = await supabase.auth.getUser();
+        const user = data?.user ?? null;
+        if (!user || cancelled) return;
+
+        const current = getValues();
+
+        // Always prefer existing typed values; only fill blanks.
+        if (!current.email?.trim() && user.email) {
+          setValue("email", user.email, { shouldDirty: false });
+        }
+
+        const res = await fetch("/api/settings/profile", { method: "GET" });
+        const json = await res.json().catch(() => null);
+        const profile = json?.success ? json.data : null;
+        if (!profile || cancelled) return;
+
+        if (!current.phone?.trim() && profile.phone) {
+          setValue("phone", String(profile.phone), { shouldDirty: false });
+        }
+
+        const fullName = (profile.full_name || "").trim();
+        if (fullName && (!current.firstName?.trim() || !current.lastName?.trim())) {
+          const parts = fullName.split(/\s+/).filter(Boolean);
+          const first = parts[0] ?? "";
+          const last = parts.slice(1).join(" ").trim();
+
+          if (!current.firstName?.trim() && first) setValue("firstName", first, { shouldDirty: false });
+          if (!current.lastName?.trim() && last) setValue("lastName", last, { shouldDirty: false });
+        }
+      } catch {
+        // Non-blocking: checkout should still work without autofill.
+      }
+    }
+
+    prefillFromAccount();
+    return () => {
+      cancelled = true;
+    };
+  }, [getValues, setValue]);
 
   const shippingCost = React.useMemo(() => {
     if (items.length === 0) return 0;
