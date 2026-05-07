@@ -83,7 +83,7 @@ function useScrollProgress(ref) {
       el.removeEventListener("scroll", update);
       ro.disconnect();
     };
-  }, [update]);
+  }, [update, ref]);
 
   return [progress, update];
 }
