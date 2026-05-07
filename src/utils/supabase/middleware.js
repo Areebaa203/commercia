@@ -80,6 +80,8 @@ export async function updateSession(request) {
     pathname === "/products" ||
     pathname.startsWith("/products/") ||
     pathname.startsWith("/api/auth") ||
+    // Stripe (and other providers) call webhooks without a user session; do not redirect them to login
+    pathname.startsWith("/api/webhook") ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon");
 
