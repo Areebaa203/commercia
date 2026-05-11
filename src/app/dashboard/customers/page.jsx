@@ -1,36 +1,42 @@
 "use client";
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Icon } from "@iconify/react";
 import { clsx } from "clsx";
+import DatePickerDropdown from "@/components/dashboard/shared/DatePickerDropdown";
+import CustomerFilterDropdown from "@/components/dashboard/customers/CustomerFilterDropdown";
 import AddCustomerModal from "@/components/dashboard/customers/AddCustomerModal";
 import ViewCustomerModal from "@/components/dashboard/customers/ViewCustomerModal";
 import EditCustomerModal from "@/components/dashboard/customers/EditCustomerModal";
 import DeleteCustomerModal from "@/components/dashboard/customers/DeleteCustomerModal";
 import CustomerActionDropdown from "@/components/dashboard/customers/CustomerActionDropdown";
-
-// Mock Data for Customers
-const customers = [
-  { id: "#CUST-001", name: "Alice Smith", email: "alice@example.com", phone: "+1 (555) 123-4567", location: "New York, USA", orders: 12, spent: "$1,240.00", status: "Active", lastOrder: "2 days ago", avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=Alice" },
-  { id: "#CUST-002", name: "Bob Jones", email: "bob@example.com", phone: "+1 (555) 987-6543", location: "London, UK", orders: 5, spent: "$450.50", status: "Active", lastOrder: "1 week ago", avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=Bob" },
-  { id: "#CUST-003", name: "Charlie Day", email: "charlie@example.com", phone: "+1 (555) 456-7890", location: "Toronto, Canada", orders: 24, spent: "$3,120.00", status: "Active", lastOrder: "3 hours ago", avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=Charlie" },
-  { id: "#CUST-004", name: "David Miller", email: "david@example.com", phone: "+1 (555) 234-5678", location: "Sydney, Australia", orders: 1, spent: "$89.99", status: "Blocked", lastOrder: "1 month ago", avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=David" },
-  { id: "#CUST-005", name: "Eva Green", email: "eva@example.com", phone: "+1 (555) 876-5432", location: "Paris, France", orders: 8, spent: "$760.00", status: "Active", lastOrder: "5 days ago", avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=Eva" },
-  { id: "#CUST-006", name: "Frank White", email: "frank@example.com", phone: "+1 (555) 345-6789", location: "Berlin, Germany", orders: 3, spent: "$210.00", status: "Active", lastOrder: "2 weeks ago", avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=Frank" },
-  { id: "#CUST-007", name: "Grace Lee", email: "grace@example.com", phone: "+1 (555) 654-3210", location: "Tokyo, Japan", orders: 15, spent: "$1,890.00", status: "Active", lastOrder: "1 day ago", avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=Grace" },
-  { id: "#CUST-008", name: "Henry Ford", email: "henry@example.com", phone: "+1 (555) 789-0123", location: "Dubai, Australia", orders: 6, spent: "$540.00", status: "Blocked", lastOrder: "3 weeks ago", avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=Henry" },
-];
-
-const stats = [
-  { label: "Total Customers", value: "2,450", change: "+15%", trend: "up", icon: "mingcute:user-3-fill", color: "bg-blue-500" },
-  { label: "Active Users", value: "1,890", change: "+8%", trend: "up", icon: "mingcute:check-circle-fill", color: "bg-green-500" },
-  { label: "New Signups", value: "145", change: "+24%", trend: "up", icon: "mingcute:user-add-fill", color: "bg-purple-500" },
-  { label: "Blocked Users", value: "25", change: "-5%", trend: "down", icon: "mingcute:close-circle-fill", color: "bg-red-500" },
-];
+import { formatDistanceToNow, format } from "date-fns";
 
 export default function CustomersPage() {
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [totalResults, setTotalResults] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
+
   const [selectedStatus, setSelectedStatus] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [dropdownFilters, setDropdownFilters] = useState({ status: "All", sortBy: "created_at", sortOrder: "desc", minSpent: "0", minOrders: "0" });
+  const [dateRange, setDateRange] = useState({ from: null, to: null });
+
+  const [isDateOpen, setIsDateOpen] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isAddCustomerOpen, setIsAddCustomerOpen] = useState(false);
   const [openActionId, setOpenActionId] = useState(null);
+
+  const dateBtnRef = useRef(null);
+  const filterBtnRef = useRef(null);
+
+  const [stats, setStats] = useState([
+    { label: "Total Customers", value: "0", change: "0%", trend: "up", icon: "mingcute:user-3-fill", color: "bg-blue-500" },
+    { label: "Active Users", value: "0", change: "0%", trend: "up", icon: "mingcute:check-circle-fill", color: "bg-green-500" },
+    { label: "New Signups", value: "0", change: "0%", trend: "up", icon: "mingcute:user-add-fill", color: "bg-purple-500" },
+    { label: "Blocked Users", value: "0", change: "0%", trend: "down", icon: "mingcute:close-circle-fill", color: "bg-red-500" },
+  ]);
   
   // Modal States
   const [viewCustomer, setViewCustomer] = useState(null);
@@ -38,6 +44,82 @@ export default function CustomersPage() {
   const [deleteCustomer, setDeleteCustomer] = useState(null);
 
   const actionRefs = useRef({});
+
+  const fetchCustomers = useCallback(async (page = 1, filter = "All", q = "", dFilters = {}, dRange = {}) => {
+    try {
+      setLoading(true);
+      let url = `/api/dashboard/customers?page=${page}&pageSize=${pageSize}&filter=${filter}&q=${encodeURIComponent(q)}`;
+      
+      if (dFilters.sortBy) url += `&sortBy=${dFilters.sortBy}`;
+      if (dFilters.sortOrder) url += `&sortOrder=${dFilters.sortOrder}`;
+      if (dFilters.minSpent && dFilters.minSpent !== "0") url += `&minSpent=${dFilters.minSpent}`;
+      if (dFilters.minOrders && dFilters.minOrders !== "0") url += `&minOrders=${dFilters.minOrders}`;
+      if (dRange.from) url += `&startDate=${dRange.from.toISOString()}`;
+      if (dRange.to) url += `&endDate=${dRange.to.toISOString()}`;
+
+      const res = await fetch(url);
+      const json = await res.json();
+      if (json.success) {
+        const mapped = json.data.map(c => ({
+          id: `#CUST-${c.id.slice(0, 5).toUpperCase()}`,
+          rawId: c.id,
+          name: c.name,
+          email: c.email,
+          phone: c.phone || "N/A",
+          location: c.location || "N/A",
+          orders: c.total_orders || 0,
+          spent: `$${parseFloat(c.total_spent || 0).toLocaleString()}`,
+          status: c.status.charAt(0).toUpperCase() + c.status.slice(1),
+          lastOrder: c.last_order_at ? formatDistanceToNow(new Date(c.last_order_at), { addSuffix: true }) : "Never",
+          avatar: c.avatar_url || `https://api.dicebear.com/9.x/avataaars/svg?seed=${c.id}`,
+          original: c
+        }));
+        setCustomers(mapped);
+        setTotalResults(json.totalCount);
+
+        const s = json.stats;
+        setStats([
+          { label: "Total Customers", value: s.total.toLocaleString(), change: "+0%", trend: "up", icon: "mingcute:user-3-fill", color: "bg-blue-500" },
+          { label: "Active Users", value: s.active.toLocaleString(), change: "+0%", trend: "up", icon: "mingcute:check-circle-fill", color: "bg-green-500" },
+          { label: "New Signups", value: s.newSignups.toLocaleString(), change: "+0%", trend: "up", icon: "mingcute:user-add-fill", color: "bg-purple-500" },
+          { label: "Blocked Users", value: s.blocked.toLocaleString(), change: "0%", trend: "down", icon: "mingcute:close-circle-fill", color: "bg-red-500" },
+        ]);
+      }
+    } catch (err) {
+      console.error("Failed to fetch dashboard customers:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [pageSize]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+        fetchCustomers(currentPage, selectedStatus, searchQuery, dropdownFilters, dateRange);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [fetchCustomers, currentPage, selectedStatus, searchQuery, dropdownFilters, dateRange]);
+
+  const handleStatusChange = (status) => {
+    setSelectedStatus(status);
+    setDropdownFilters(prev => ({ ...prev, status }));
+    setCurrentPage(1);
+  };
+
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+    setCurrentPage(1);
+  };
+
+  const handleFilterApply = (filters) => {
+    setDropdownFilters(filters);
+    setSelectedStatus(filters.status);
+    setCurrentPage(1);
+  };
+
+  const handleDateSelect = (range) => {
+    setDateRange(range);
+    setCurrentPage(1);
+  };
 
   return (
     <div className="space-y-6">
@@ -62,6 +144,7 @@ export default function CustomersPage() {
              <AddCustomerModal 
                 isOpen={isAddCustomerOpen}
                 onClose={() => setIsAddCustomerOpen(false)}
+                onSuccess={() => fetchCustomers(currentPage, selectedStatus, searchQuery, dropdownFilters, dateRange)}
              />
         </div>
       </div>
@@ -91,7 +174,7 @@ export default function CustomersPage() {
       </div>
 
       {/* Customers Table Section */}
-      <div className="rounded-xl bg-white shadow-sm ring-1 ring-gray-100 overflow-hidden">
+      <div className="rounded-xl bg-white shadow-sm ring-1 ring-gray-100 min-h-[450px]">
         {/* Filters */}
         <div className="border-b border-gray-100 p-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -100,7 +183,7 @@ export default function CustomersPage() {
                     {["All", "Active", "Blocked"].map((tab) => (
                         <button
                             key={tab}
-                            onClick={() => setSelectedStatus(tab)}
+                            onClick={() => handleStatusChange(tab)}
                             className={clsx(
                                 "px-4 py-1.5 rounded-md text-sm font-medium transition-all whitespace-nowrap",
                                 selectedStatus === tab ? "bg-white text-gray-900 shadow-sm ring-1 ring-gray-200" : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
@@ -116,21 +199,51 @@ export default function CustomersPage() {
                     <div className="relative flex-1 sm:w-64">
                         <Icon icon="mingcute:search-line" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" width="18" />
                         <input 
-                            type="text" 
+                            type="search" 
+                            value={searchQuery}
+                            onChange={handleSearchChange}
                             placeholder="Search customers..." 
                             className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-4 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
                         />
                     </div>
-                    <button className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-                        <Icon icon="mingcute:filter-line" width="18" />
-                        Filters
-                    </button>
+                    <div className="relative" ref={dateBtnRef}>
+                         <button 
+                            onClick={() => setIsDateOpen(!isDateOpen)}
+                            className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors whitespace-nowrap"
+                        >
+                            <Icon icon="mingcute:calendar-line" width="18" />
+                            {dateRange.from && dateRange.to 
+                                ? `${format(dateRange.from, "MMM d")} - ${format(dateRange.to, "MMM d")}` 
+                                : "Select Dates"}
+                         </button>
+                         <DatePickerDropdown 
+                            isOpen={isDateOpen} 
+                            onClose={() => setIsDateOpen(false)} 
+                            anchorRef={dateBtnRef}
+                            onSelect={handleDateSelect}
+                         />
+                    </div>
+                    <div className="relative" ref={filterBtnRef}>
+                        <button 
+                            onClick={() => setIsFilterOpen(!isFilterOpen)}
+                            className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                        >
+                            <Icon icon="mingcute:filter-line" width="18" />
+                            Filters
+                        </button>
+                        <CustomerFilterDropdown 
+                            isOpen={isFilterOpen}
+                            onClose={() => setIsFilterOpen(false)}
+                            anchorRef={filterBtnRef}
+                            onApply={handleFilterApply}
+                        />
+                    </div>
                 </div>
             </div>
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto">
+        <div>
             <table className="w-full text-left text-sm text-gray-500">
                 <thead className="bg-gray-50/50 text-xs font-semibold uppercase text-gray-400">
                     <tr>
@@ -149,81 +262,120 @@ export default function CustomersPage() {
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 border-t border-gray-100">
-                    {customers.map((customer) => (
-                        <tr key={customer.id} className="group hover:bg-gray-50/50 transition-colors">
-                            <td className="px-6 py-4">
-                                <div className="flex items-center gap-3">
-                                    <input type="checkbox" className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                                    <img src={customer.avatar} alt={customer.name} className="h-10 w-10 rounded-full bg-gray-100 object-cover" />
-                                    <div>
-                                        <div className="font-medium text-gray-900">{customer.name}</div>
-                                        <div className="text-xs text-gray-400">{customer.email}</div>
-                                    </div>
+                    {loading ? (
+                        <tr>
+                            <td colSpan="7" className="px-6 py-20 text-center">
+                                <div className="flex flex-col items-center justify-center gap-3">
+                                    <Icon icon="line-md:loading-twotone-loop" className="size-8 text-blue-600" />
+                                    <p className="text-sm font-medium text-gray-500">Loading customers...</p>
                                 </div>
                             </td>
-                            <td className="px-6 py-4 text-gray-500">{customer.phone}</td>
-                            <td className="px-6 py-4 text-gray-500">{customer.location}</td>
-                            <td className="px-6 py-4 text-right font-medium text-gray-900">{customer.orders}</td>
-                            <td className="px-6 py-4 text-right font-medium text-gray-900">{customer.spent}</td>
-                            <td className="px-6 py-4">
-                                <span className={clsx("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset", 
-                                    customer.status === "Active" ? "bg-green-100 text-green-700 ring-green-600/20" : "bg-red-100 text-red-700 ring-red-600/20"
-                                )}>
-                                    {customer.status}
-                                </span>
-                            </td>
-                            <td className="px-6 py-4 text-right relative">
-                                <button 
-                                    ref={(el) => (actionRefs.current[customer.id] = el)}
-                                    onClick={() => setOpenActionId(openActionId === customer.id ? null : customer.id)}
-                                    className={clsx(
-                                        "rounded-lg p-2 transition-colors",
-                                        openActionId === customer.id ? "bg-gray-100 text-gray-900" : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-                                    )}
-                                >
-                                    <Icon icon="mingcute:more-2-fill" width="20" />
-                                </button>
-                                <CustomerActionDropdown 
-                                    isOpen={openActionId === customer.id} 
-                                    onClose={() => setOpenActionId(null)}
-                                    anchorRef={{ current: actionRefs.current[customer.id] }}
-                                    customer={customer}
-                                    onView={(c) => setViewCustomer(c)}
-                                    onEdit={(c) => setEditCustomer(c)}
-                                    onDelete={(c) => setDeleteCustomer(c)}
-                                />
+                        </tr>
+                    ) : customers.length === 0 ? (
+                        <tr>
+                            <td colSpan="7" className="px-6 py-20 text-center text-gray-500">
+                                No customers found.
                             </td>
                         </tr>
-                    ))}
+                    ) : (
+                        customers.map((customer) => (
+                            <tr key={customer.rawId} className="group hover:bg-gray-50/50 transition-colors">
+                                <td className="px-6 py-4">
+                                    <div className="flex items-center gap-3">
+                                        <input type="checkbox" className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                                        <img src={customer.avatar} alt={customer.name} className="h-10 w-10 rounded-full bg-gray-100 object-cover" />
+                                        <div>
+                                            <div className="font-medium text-gray-900">{customer.name}</div>
+                                            <div className="text-xs text-gray-400">{customer.email}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td className="px-6 py-4 text-gray-500">{customer.phone}</td>
+                                <td className="px-6 py-4 text-gray-500">{customer.location}</td>
+                                <td className="px-6 py-4 text-right font-medium text-gray-900">{customer.orders}</td>
+                                <td className="px-6 py-4 text-right font-medium text-gray-900">{customer.spent}</td>
+                                <td className="px-6 py-4">
+                                    <span className={clsx("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset", 
+                                        customer.status === "Active" ? "bg-green-100 text-green-700 ring-green-600/20" : "bg-red-100 text-red-700 ring-red-600/20"
+                                    )}>
+                                        {customer.status}
+                                    </span>
+                                </td>
+                                <td className="px-6 py-4 text-right relative">
+                                    <button 
+                                        ref={(el) => (actionRefs.current[customer.rawId] = el)}
+                                        onClick={() => setOpenActionId(openActionId === customer.rawId ? null : customer.rawId)}
+                                        className={clsx(
+                                            "rounded-lg p-2 transition-colors",
+                                            openActionId === customer.rawId ? "bg-gray-100 text-gray-900" : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                                        )}
+                                    >
+                                        <Icon icon="mingcute:more-2-fill" width="20" />
+                                    </button>
+                                    <CustomerActionDropdown 
+                                        isOpen={openActionId === customer.rawId} 
+                                        onClose={() => setOpenActionId(null)}
+                                        anchorRef={{ current: actionRefs.current[customer.rawId] }}
+                                        customer={customer}
+                                        onView={(c) => setViewCustomer(c)}
+                                        onEdit={(c) => setEditCustomer(c)}
+                                        onDelete={(c) => setDeleteCustomer(c)}
+                                    />
+                                </td>
+                            </tr>
+                        ))
+                    )}
                 </tbody>
             </table>
         </div>
 
         {/* Pagination */}
-        <div className="flex flex-col sm:flex-row items-center justify-between border-t border-gray-100 px-6 py-4 gap-4">
+        <div className="flex flex-col sm:flex-row items-center justify-between border-t border-gray-100 px-6 py-4 bg-white rounded-xl shadow-sm ring-1 ring-gray-100 gap-4">
             <div className="text-sm text-gray-500 text-center sm:text-left">
-                Showing <span className="font-medium text-gray-900">1</span> to <span className="font-medium text-gray-900">8</span> of <span className="font-medium text-gray-900">2,450</span> results
+                Showing <span className="font-medium text-gray-900">{(currentPage - 1) * pageSize + 1}</span> to <span className="font-medium text-gray-900">{Math.min(currentPage * pageSize, totalResults)}</span> of <span className="font-medium text-gray-900">{totalResults.toLocaleString()}</span> results
             </div>
             <div className="flex items-center gap-2 overflow-x-auto max-w-full pb-2 sm:pb-0 no-scrollbar">
-                <button className="rounded-lg border border-gray-200 px-3 py-1 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 shrink-0">
+                <button 
+                    disabled={currentPage === 1 || loading}
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    className="rounded-lg border border-gray-200 px-3 py-1 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 shrink-0"
+                >
                     Previous
                 </button>
                 <div className="flex items-center gap-1">
-                    <button className="rounded-lg bg-blue-50 px-3 py-1 text-sm font-medium text-blue-600 border border-blue-100 shrink-0">
-                        1
-                    </button>
-                    <button className="rounded-lg px-3 py-1 text-sm font-medium text-gray-600 hover:bg-gray-50 shrink-0">
-                        2
-                    </button>
-                    <button className="rounded-lg px-3 py-1 text-sm font-medium text-gray-600 hover:bg-gray-50 shrink-0 hidden sm:block">
-                        3
-                    </button>
-                    <span className="text-gray-400 shrink-0">...</span>
-                    <button className="rounded-lg px-3 py-1 text-sm font-medium text-gray-600 hover:bg-gray-50 shrink-0 hidden sm:block">
-                        12
-                    </button>
+                    {Array.from({ length: Math.ceil(totalResults / pageSize) }).map((_, i) => {
+                        const page = i + 1;
+                        if (
+                            page === 1 || 
+                            page === Math.ceil(totalResults / pageSize) || 
+                            (page >= currentPage - 1 && page <= currentPage + 1)
+                        ) {
+                            return (
+                                <button
+                                    key={page}
+                                    onClick={() => setCurrentPage(page)}
+                                    className={clsx(
+                                        "rounded-lg px-3 py-1 text-sm font-medium shrink-0 transition-colors",
+                                        currentPage === page 
+                                            ? "bg-blue-50 text-blue-600 border border-blue-100" 
+                                            : "text-gray-600 hover:bg-gray-50"
+                                    )}
+                                >
+                                    {page}
+                                </button>
+                            );
+                        }
+                        if (page === currentPage - 2 || page === currentPage + 2) {
+                            return <span key={page} className="text-gray-400 shrink-0">...</span>;
+                        }
+                        return null;
+                    })}
                 </div>
-                <button className="rounded-lg border border-gray-200 px-3 py-1 text-sm font-medium text-gray-600 hover:bg-gray-50 shrink-0">
+                <button 
+                    disabled={currentPage === Math.ceil(totalResults / pageSize) || loading}
+                    onClick={() => setCurrentPage(prev => Math.min(Math.ceil(totalResults / pageSize), prev + 1))}
+                    className="rounded-lg border border-gray-200 px-3 py-1 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 shrink-0"
+                >
                     Next
                 </button>
             </div>
@@ -234,17 +386,19 @@ export default function CustomersPage() {
       <ViewCustomerModal 
         isOpen={!!viewCustomer} 
         onClose={() => setViewCustomer(null)} 
-        customer={viewCustomer} 
+        customer={viewCustomer?.original} 
       />
       <EditCustomerModal 
         isOpen={!!editCustomer} 
         onClose={() => setEditCustomer(null)} 
-        customer={editCustomer} 
+        customer={editCustomer?.original} 
+        onSuccess={() => fetchCustomers(currentPage, selectedStatus, searchQuery, dropdownFilters, dateRange)}
       />
       <DeleteCustomerModal 
         isOpen={!!deleteCustomer} 
         onClose={() => setDeleteCustomer(null)} 
-        customer={deleteCustomer} 
+        customer={deleteCustomer?.original} 
+        onSuccess={() => fetchCustomers(currentPage, selectedStatus, searchQuery, dropdownFilters, dateRange)}
       />
     </div>
   );

@@ -3,8 +3,9 @@ import React, { useEffect, useState } from "react";
 import { Icon } from "@iconify/react";
 import { clsx } from "clsx";
 
-const DeleteCustomerModal = ({ isOpen, onClose, customer }) => {
+const DeleteCustomerModal = ({ isOpen, onClose, customer, onSuccess }) => {
   const [isVisible, setIsVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -14,6 +15,29 @@ const DeleteCustomerModal = ({ isOpen, onClose, customer }) => {
       return () => clearTimeout(timer);
     }
   }, [isOpen]);
+
+  const handleDelete = async () => {
+    if (!customer?.id) return;
+
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/dashboard/customers/${customer.id}`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+      if (json.success) {
+        onSuccess?.();
+        onClose();
+      } else {
+        alert(json.message || "Failed to delete customer");
+      }
+    } catch (err) {
+      console.error("Error deleting customer:", err);
+      alert("An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (!isVisible && !isOpen) return null;
 
@@ -31,7 +55,7 @@ const DeleteCustomerModal = ({ isOpen, onClose, customer }) => {
       {/* Modal Content */}
       <div 
         className={clsx(
-          "relative w-full max-w-sm transform rounded-2xl bg-white p-6 shadow-xl transition-all duration-300",
+          "relative w-full max-w-md transform rounded-2xl bg-white p-6 shadow-xl transition-all duration-300",
           isOpen ? "scale-100 opacity-100 translate-y-0" : "scale-95 opacity-0 translate-y-4"
         )}
       >
@@ -47,17 +71,17 @@ const DeleteCustomerModal = ({ isOpen, onClose, customer }) => {
             <div className="mt-6 flex w-full gap-3">
                 <button 
                     onClick={onClose}
-                    className="flex-1 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                    disabled={loading}
+                    className="flex-1 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
                 >
                     Cancel
                 </button>
                 <button 
-                    className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition-colors shadow-sm"
-                    onClick={() => {
-                        // Handle delete logic here
-                        onClose();
-                    }}
+                    disabled={loading}
+                    className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition-colors shadow-sm disabled:opacity-50"
+                    onClick={handleDelete}
                 >
+                    {loading && <Icon icon="line-md:loading-twotone-loop" width="18" />}
                     Delete
                 </button>
             </div>

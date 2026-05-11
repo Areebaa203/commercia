@@ -1,10 +1,9 @@
 "use client";
-
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Icon } from "@iconify/react";
-import { CATEGORIES, PRODUCTS } from "@/components/home/popularPicksData";
+import { CATEGORIES } from "@/components/home/popularPicksData";
 import { useCart } from "@/contexts/CartContext";
 
 const BG = "#F9F7F0";
@@ -14,7 +13,7 @@ const MUTED = "#6d7268";
 const DISCOUNT_BG = "#B22222";
 
 function formatPrice(n) {
-  return n.toFixed(2);
+  return typeof n === "number" ? n.toFixed(2) : "0.00";
 }
 
 export function ProductCard({ product }) {
@@ -91,18 +90,40 @@ export function ProductCard({ product }) {
 }
 
 export default function PopularPicksSection() {
-  const [activeCategory, setActiveCategory] = useState("living");
+  const [activeCategory, setActiveCategory] = useState("Living Room");
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const visible = useMemo(() => {
-    const filtered = PRODUCTS.filter((p) => p.category === activeCategory);
-    if (filtered.length > 0) return filtered;
-    return PRODUCTS.filter((p) => p.category === "living");
-  }, [activeCategory]);
+  const fetchProducts = useCallback(async (cat) => {
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/storefront/products?category=${cat}&pageSize=4`);
+      const json = await res.json();
+      if (json.success) {
+        const mapped = json.data.products.map(p => ({
+          ...p,
+          slug: p.id,
+          image: p.image_url,
+          discount: 15, // Mock discount
+          compareAt: p.price * 1.15,
+          reviews: Math.floor(Math.random() * 50) + 10,
+        }));
+        setProducts(mapped);
+      }
+    } catch (err) {
+      console.error("Failed to fetch popular picks:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchProducts(activeCategory);
+  }, [activeCategory, fetchProducts]);
 
   return (
     <section className="py-6 sm:py-10" style={{ backgroundColor: BG }}>
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        {/* Title + Show all */}
         <div className="flex items-start justify-between gap-3">
           <h2
             className="font-home-heading max-w-[70%] text-[1.75rem] leading-[1.1] tracking-tight sm:max-w-none sm:text-3xl md:text-4xl lg:text-[2.75rem]"
@@ -119,7 +140,6 @@ export default function PopularPicksSection() {
           </Link>
         </div>
 
-        {/* Category chips — horizontal scroll on narrow screens */}
         <div
           className="no-scrollbar mt-5 -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:mt-6 sm:flex-wrap sm:px-0"
           role="tablist"
@@ -146,11 +166,18 @@ export default function PopularPicksSection() {
           })}
         </div>
 
-        {visible.length === 0 ? (
-          <p className="mt-10 text-center text-sm text-neutral-500">No products in this category yet.</p>
+        {loading ? (
+          <div className="mt-20 flex flex-col items-center justify-center">
+            <Icon icon="line-md:loading-twotone-loop" className="size-10 text-[#2D3E33]" />
+            <p className="mt-4 text-xs font-medium text-neutral-500 uppercase tracking-widest">Updating Collection...</p>
+          </div>
+        ) : products.length === 0 ? (
+          <p className="mt-20 text-center text-sm text-neutral-500 font-home-body py-10 border border-dashed border-[#d4cfc3] bg-black/5 rounded-sm">
+            No products found in the <span className="font-semibold">{activeCategory}</span> collection yet.
+          </p>
         ) : (
           <ul className="mt-8 grid list-none grid-cols-2 gap-x-3 gap-y-8 sm:mt-10 sm:gap-x-4 sm:gap-y-10 lg:grid-cols-4 lg:gap-x-6">
-            {visible.map((product) => (
+            {products.map((product) => (
               <li key={product.id} className="min-w-0">
                 <ProductCard product={product} />
               </li>

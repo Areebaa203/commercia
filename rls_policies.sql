@@ -227,3 +227,6 @@ CREATE POLICY "Users update global in-app notifications"
 ON notifications FOR UPDATE TO authenticated
 USING (user_id IS NULL)
 WITH CHECK (user_id IS NULL);
+
+-- Guest checkout (anon): SECURITY DEFINER RPCs — no permissive anon SELECT/INSERT on orders.
+-- Run migrations/guest_checkout_anon_rls.sql after this file (functions + grants + policy cleanup).

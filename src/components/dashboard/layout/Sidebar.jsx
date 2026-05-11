@@ -21,11 +21,39 @@ const navItems = [
 const Sidebar = () => {
   const pathname = usePathname();
   const { isCollapsed, toggleSidebar, isMobileOpen, closeMobileSidebar } = useSidebar();
+  const [orderCount, setOrderCount] = useState(0);
   
   // Track open state for nav items
   const [openDropdowns, setOpenDropdowns] = useState({ "Online Store": false });
   // Track premium widget visibility
   const [isPremiumOpen, setIsPremiumOpen] = useState(true);
+
+  React.useEffect(() => {
+    const fetchOrderCount = async () => {
+      try {
+        const res = await fetch("/api/dashboard/orders?pageSize=1");
+        const json = await res.json();
+        if (json.success) {
+          setOrderCount(json.totalCount);
+        }
+      } catch (err) {
+        console.error("Failed to fetch order count for sidebar:", err);
+      }
+    };
+    fetchOrderCount();
+  }, []);
+
+  const navItems = [
+    { name: "Dashboard", href: "/dashboard", icon: "mingcute:grid-fill" },
+    { name: "Orders", href: "/dashboard/orders", icon: "mingcute:shopping-bag-3-line", badge: orderCount },
+    { name: "Products", href: "/dashboard/products", icon: "mingcute:box-3-line" },
+    { name: "Customers", href: "/dashboard/customers", icon: "mingcute:user-3-line" },
+    { name: "Content", href: "/dashboard/content", icon: "mingcute:file-line" },
+    { name: "Online Store", href: "/dashboard/store", icon: "mingcute:store-2-line" },
+    { name: "Finances", href: "/dashboard/finances", icon: "mingcute:wallet-3-line" },
+    { name: "Analytics", href: "/dashboard/analytics", icon: "mingcute:chart-bar-line" },
+    { name: "Discounts", href: "/dashboard/discounts", icon: "mingcute:coupon-line" },
+  ];
 
   const toggleDropdown = (name) => {
     setOpenDropdowns((prev) => ({ ...prev, [name]: !prev[name] }));
@@ -107,12 +135,12 @@ const Sidebar = () => {
                 >
                   <Icon icon={item.icon} width="20" className="shrink-0" />
                   <span className={clsx(isCollapsed && "lg:hidden")}>{item.name}</span>
-                  {item.badge && (
+                  {item.badge !== undefined && item.badge > 0 && (
                     <span className={clsx("ml-auto rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-600", isCollapsed && "lg:hidden")}>
                       {item.badge}
                     </span>
                   )}
-                  {isCollapsed && item.badge && (
+                  {isCollapsed && item.badge !== undefined && item.badge > 0 && (
                      <div className="hidden lg:block absolute right-2 top-2 h-2 w-2 rounded-full bg-green-500 ring-2 ring-white"></div>
                   )}
                 </Link>

@@ -19,32 +19,7 @@ export default function AccountProfileSettings() {
     loading: true,
   });
 
-  const [addresses, setAddresses] = useState([
-    {
-      id: "1",
-      isDefault: true,
-      firstName: "John",
-      lastName: "Doe",
-      address: "206 Batran's Street, 39",
-      apartment: "",
-      zipCode: "2044",
-      city: "Ottawa",
-      state: "Ontario",
-      country: "Canada",
-    },
-    {
-      id: "2",
-      isDefault: false,
-      firstName: "John",
-      lastName: "Doe",
-      address: "206 Batran's Street, 39",
-      apartment: "",
-      zipCode: "2044",
-      city: "Ottawa",
-      state: "Ontario",
-      country: "Canada",
-    },
-  ]);
+  const [addresses, setAddresses] = useState([]);
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
@@ -68,7 +43,15 @@ export default function AccountProfileSettings() {
         } else {
           setProfile((s) => ({ ...s, loading: false }));
         }
-      } catch {
+
+        // Fetch addresses
+        const addrRes = await fetch("/api/account/addresses");
+        const addrJson = await addrRes.json();
+        if (addrJson.success) {
+          setAddresses(addrJson.data || []);
+        }
+      } catch (err) {
+        console.error("Error loading profile/addresses:", err);
         setProfile((s) => ({ ...s, loading: false }));
       }
     })();
@@ -85,13 +68,11 @@ export default function AccountProfileSettings() {
         body: JSON.stringify({
           fullName: updatedProfile.fullName,
           phone: updatedProfile.phone,
-          // avatarUrl is currently not in the UI but the API expects it or we can omit it if not changed
         }),
       });
       const json = await res.json();
       if (!json.success) {
         console.error("Failed to save profile:", json.message);
-        // Rollback or show error toast could go here
       }
     } catch (error) {
       console.error("Error saving profile:", error);
@@ -104,17 +85,41 @@ export default function AccountProfileSettings() {
   };
 
   const handleSaveAddress = async (addressData) => {
-    // This will be implemented when the address API is ready
-    console.log("Saving address:", addressData);
-    if (editingAddress) {
-      setAddresses(addresses.map(a => a.id === editingAddress.id ? { ...a, ...addressData } : a));
+    try {
+      const res = await fetch(`/api/account/addresses/${editingAddress.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(addressData),
+      });
+      const json = await res.json();
+      if (json.success) {
+        // Refresh addresses
+        const addrRes = await fetch("/api/account/addresses");
+        const addrJson = await addrRes.json();
+        if (addrJson.success) setAddresses(addrJson.data);
+      }
+    } catch (error) {
+      console.error("Error saving address:", error);
     }
   };
 
   const handleAddAddress = async (addressData) => {
-    // This will be implemented when the address API is ready
-    console.log("Adding address:", addressData);
-    setAddresses([...addresses, { ...addressData, id: Math.random().toString() }]);
+    try {
+      const res = await fetch("/api/account/addresses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(addressData),
+      });
+      const json = await res.json();
+      if (json.success) {
+        // Refresh addresses
+        const addrRes = await fetch("/api/account/addresses");
+        const addrJson = await addrRes.json();
+        if (addrJson.success) setAddresses(addrJson.data);
+      }
+    } catch (error) {
+      console.error("Error adding address:", error);
+    }
   };
 
   if (profile.loading) {
@@ -210,13 +215,34 @@ export default function AccountProfileSettings() {
                   <p>{addr.address}</p>
                   <p>{addr.country}</p>
                 </div>
-                <button 
-                  onClick={() => handleEditAddress(addr)}
-                  className="mt-4 flex items-center gap-1.5 text-[14px] font-medium text-[#4a524a] transition hover:text-[#1a251f]"
-                >
-                  <Icon icon="mingcute:edit-2-line" className="size-3.5" />
-                  <span>Edit</span>
-                </button>
+                <div className="mt-4 flex items-center gap-4">
+                  <button 
+                    onClick={() => handleEditAddress(addr)}
+                    className="flex items-center gap-1.5 text-[14px] font-medium text-[#4a524a] transition hover:text-[#1a251f]"
+                  >
+                    <Icon icon="mingcute:edit-2-line" className="size-3.5" />
+                    <span>Edit</span>
+                  </button>
+                  <button 
+                    onClick={async () => {
+                      if (confirm("Are you sure you want to delete this address?")) {
+                        try {
+                          const res = await fetch(`/api/account/addresses/${addr.id}`, { method: "DELETE" });
+                          const json = await res.json();
+                          if (json.success) {
+                            setAddresses(addresses.filter(a => a.id !== addr.id));
+                          }
+                        } catch (error) {
+                          console.error("Error deleting address:", error);
+                        }
+                      }
+                    }}
+                    className="flex items-center gap-1.5 text-[14px] font-medium text-red-600 transition hover:text-red-700"
+                  >
+                    <Icon icon="mingcute:delete-2-line" className="size-3.5" />
+                    <span>Delete</span>
+                  </button>
+                </div>
               </div>
             ))}
           </div>

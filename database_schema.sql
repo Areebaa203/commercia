@@ -1,4 +1,5 @@
 -- ==========================================
+
 -- STEP 0: ENUM DEFINITIONS (LOWERCASE)
 -- ==========================================
 
@@ -619,4 +620,7 @@ ORDER BY created_at DESC;
 -- Storefront orders (logged-in buyers): run `migrations/storefront_orders.sql`
 -- after base schema. Adds orders.user_id, checkout_details, line snapshots on
 -- order_items, and customer-facing RLS (also merged into rls_policies.sql).
+--
+-- Guest checkout (anon): after rls_policies.sql, run
+-- `migrations/guest_checkout_anon_rls.sql` — create_guest_checkout_order RPC.
 -- ---------------------------------------------------------------------------

@@ -107,3 +107,7 @@ BEGIN
   );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 5. Guest checkout (anon)
+-- Deploy: migrations/guest_checkout_anon_rls.sql after rls_policies.sql
+-- Defines ensure_guest_customer (internal) + create_guest_checkout_order (GRANT EXECUTE TO anon).

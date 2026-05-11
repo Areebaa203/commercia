@@ -18,6 +18,20 @@ function formatMoney(n) {
   return n.toFixed(2);
 }
 
+/** Avoid showing stale "Pending Stripe Payment" when `payment_status` in DB is already paid. */
+function paymentMethodLabel(order) {
+  const raw = order?.checkoutDetails?.paymentDisplay;
+  const paid = order?.paymentStatus === "paid";
+  if (paid) {
+    if (raw && !/pending/i.test(raw)) return raw;
+    return `Paid — Card — $${formatMoney(Number(order?.total ?? 0))}`;
+  }
+  if (order?.paymentStatus === "failed") {
+    return raw && !/pending/i.test(raw) ? raw : "Payment failed";
+  }
+  return raw ?? "Pending payment";
+}
+
 function PolicyLinks() {
   return (
     <nav className="mt-12 flex flex-col items-center gap-2 border-t border-[#ebe6df] pt-8 font-home-body text-[11px] text-neutral-500 sm:flex-row sm:flex-wrap sm:justify-center sm:gap-x-6 sm:gap-y-2">
@@ -41,11 +55,13 @@ export default function CheckoutConfirmationView() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
+  const sessionId = searchParams.get("session_id");
   const { addItem } = useCart();
 
   const [order, setOrder] = React.useState(null);
   const [userId, setUserId] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
+  const [loadError, setLoadError] = React.useState("");
 
   React.useEffect(() => {
     let cancelled = false;
@@ -57,28 +73,79 @@ export default function CheckoutConfirmationView() {
       const supabase = createClient();
       const uid = await resolveSupabaseUserId(supabase);
       if (cancelled) return;
-      if (!uid) {
-        router.replace(`/login?next=${encodeURIComponent(`/checkout/confirmation?orderId=${orderId}`)}`);
+
+      /**
+       * Stripe's success_url includes `session_id`. The storefront confirmation route
+       * verifies the session with Stripe and runs `fulfillCheckoutSessionCompleted`
+       * (sets `payment_status` + `checkout_details.paymentDisplay`). That must run for
+       * **every** buyer who lands here after pay — including logged-in users. Previously
+       * we only called `/api/account/orders`, which reads the DB as-is and left
+       * "Pending Stripe Payment" when the webhook had not fired yet.
+       */
+      if (sessionId?.trim()) {
+        if (uid) setUserId(uid);
+        const res = await fetch(
+          `/api/storefront/orders/${encodeURIComponent(orderId)}/confirmation?session_id=${encodeURIComponent(sessionId.trim())}`,
+          { cache: "no-store" }
+        );
+        const json = await res.json();
+        if (cancelled) return;
+        if (res.ok && json.success && json.data) {
+          setOrder(json.data);
+          setLoading(false);
+          return;
+        }
+        if (uid) {
+          const res2 = await fetch(`/api/account/orders/${encodeURIComponent(orderId)}`, {
+            cache: "no-store",
+          });
+          const json2 = await res2.json();
+          if (cancelled) return;
+          if (res2.ok && json2.success && json2.data) {
+            setOrder(json2.data);
+            setLoading(false);
+            return;
+          }
+          router.replace("/account/orders");
+          return;
+        }
+        if (!cancelled) {
+          setLoadError(
+            json.message || "We could not verify your order. Try again from checkout or contact support."
+          );
+          setLoading(false);
+        }
         return;
       }
-      setUserId(uid);
-      const res = await fetch(`/api/account/orders/${encodeURIComponent(orderId)}`, {
-        cache: "no-store",
-      });
-      const json = await res.json();
-      if (cancelled) return;
-      if (!res.ok || !json.success || !json.data) {
-        router.replace("/account/orders");
+
+      if (uid) {
+        setUserId(uid);
+        const res = await fetch(`/api/account/orders/${encodeURIComponent(orderId)}`, {
+          cache: "no-store",
+        });
+        const json = await res.json();
+        if (cancelled) return;
+        if (!res.ok || !json.success || !json.data) {
+          router.replace("/account/orders");
+          return;
+        }
+        setOrder(json.data);
+        setLoading(false);
         return;
       }
-      setOrder(json.data);
-      setLoading(false);
+
+      if (!cancelled) {
+        setLoadError(
+          "This confirmation link is incomplete. Use the link from your payment receipt email, or sign in to view your orders."
+        );
+        setLoading(false);
+      }
     }
     void run();
     return () => {
       cancelled = true;
     };
-  }, [orderId, router]);
+  }, [orderId, sessionId, router]);
 
   const d = order?.checkoutDetails ?? {};
   const itemCount = order?.itemsCount ?? order?.lines?.reduce((s, l) => s + (l.qty ?? 0), 0) ?? 0;
@@ -109,7 +176,7 @@ export default function CheckoutConfirmationView() {
     router.push("/account/orders");
   };
 
-  if (loading || !order) {
+  if (loading) {
     return (
       <div className="min-h-[40vh] px-4 py-16 font-home-body text-sm text-neutral-500" style={{ backgroundColor: BG_PAGE }}>
         Loading order…
@@ -117,24 +184,50 @@ export default function CheckoutConfirmationView() {
     );
   }
 
+  if (loadError) {
+    return (
+      <div className="mx-auto max-w-lg px-4 py-16 font-home-body text-sm" style={{ backgroundColor: BG_PAGE }}>
+        <h1 className="font-home-heading text-xl text-[#1a3021]">We couldn&apos;t load this order</h1>
+        <p className="mt-3 leading-relaxed text-neutral-600">{loadError}</p>
+        <div className="mt-8 flex flex-wrap gap-3">
+          <Link
+            href="/checkout"
+            className="inline-flex h-11 items-center justify-center rounded-md px-6 text-sm font-semibold text-white"
+            style={{ backgroundColor: FOREST }}
+          >
+            Back to checkout
+          </Link>
+          <Link href="/login" className="inline-flex h-11 items-center justify-center rounded-md border border-neutral-300 px-6 text-sm font-medium text-[#1a3021]">
+            Sign in
+          </Link>
+        </div>
+        <PolicyLinks />
+      </div>
+    );
+  }
+
+  if (!order) {
+    return null;
+  }
+
   return (
     <div className="pb-16 lg:pb-24" style={{ backgroundColor: BG_PAGE }}>
       <div className="mx-auto max-w-7xl px-4 pt-8 sm:px-6 lg:px-8">
         <h1 className="font-home-heading text-[2rem] font-normal leading-[1.1] tracking-[-0.02em] text-[#1a3021] sm:text-[2.25rem] md:text-[2.5rem]">
-          My account
+          {userId ? "My account" : "Thank you"}
         </h1>
 
         <div className="mt-8 flex flex-col gap-4 border-b border-[#ebe6df] pb-6 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <Link
-              href="/account/orders"
+              href={userId ? "/account/orders" : "/shop-all"}
               className="inline-flex items-center gap-2 font-home-body text-sm font-medium text-[#1a3021] transition hover:opacity-80"
             >
               <Icon icon="mingcute:arrow-left-line" className="size-5" aria-hidden />
               Order #{order.orderNumber}
             </Link>
             <p className="mt-1 font-home-body text-sm text-neutral-500">
-              {d.confirmedHeadline ?? "Order placed"}
+              {userId ? (d.confirmedHeadline ?? "Order placed") : "Your order is confirmed."}
             </p>
           </div>
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:shrink-0">
@@ -146,27 +239,29 @@ export default function CheckoutConfirmationView() {
             >
               Buy again
             </button>
-            <Popover>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  className="font-home-sub flex h-12 w-full items-center justify-center gap-2 rounded-md border border-[#c9c4bb] bg-[#f2efea] px-6 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#1a3021] transition hover:bg-[#ebe6df] sm:w-auto"
-                >
-                  Manage
-                  <Icon icon="mingcute:down-line" className="size-4" aria-hidden />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent align="end" className="w-52 p-2 font-home-body text-sm">
-                <button
-                  type="button"
-                  onClick={handleCancelOrder}
-                  className="w-full rounded-md px-3 py-2 text-left text-red-700 transition hover:bg-red-50"
-                >
-                  Cancel order
-                </button>
-                <p className="px-3 py-2 text-xs text-neutral-500">Demo only — removes this order locally.</p>
-              </PopoverContent>
-            </Popover>
+            {userId ? (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className="font-home-sub flex h-12 w-full items-center justify-center gap-2 rounded-md border border-[#c9c4bb] bg-[#f2efea] px-6 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#1a3021] transition hover:bg-[#ebe6df] sm:w-auto"
+                  >
+                    Manage
+                    <Icon icon="mingcute:down-line" className="size-4" aria-hidden />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-52 p-2 font-home-body text-sm">
+                  <button
+                    type="button"
+                    onClick={handleCancelOrder}
+                    className="w-full rounded-md px-3 py-2 text-left text-red-700 transition hover:bg-red-50"
+                  >
+                    Cancel order
+                  </button>
+                  <p className="px-3 py-2 text-xs text-neutral-500">Demo only — removes this order locally.</p>
+                </PopoverContent>
+              </Popover>
+            ) : null}
           </div>
         </div>
 
@@ -238,7 +333,7 @@ export default function CheckoutConfirmationView() {
                       <span className="rounded bg-white px-2 py-0.5 text-[9px] font-bold text-[#1a1f71] shadow-sm ring-1 ring-neutral-200">
                         VISA
                       </span>
-                      {d.paymentDisplay ?? "Visa •••• 1234 - $0.00"}
+                      {paymentMethodLabel(order)}
                     </div>
                   </div>
                   <div>

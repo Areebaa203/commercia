@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState, useRef } from "react";
 import { clsx } from "clsx";
-import { format, subDays, startOfMonth, endOfMonth, subMonths } from "date-fns";
+import { format, subDays, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay } from "date-fns";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -45,28 +45,28 @@ const DatePickerDropdown = ({ isOpen, onClose, anchorRef, onSelect }) => {
 
     switch (range) {
       case "Today":
-        from = today;
-        to = today;
+        from = startOfDay(today);
+        to = endOfDay(today);
         break;
       case "Yesterday":
-        from = subDays(today, 1);
-        to = subDays(today, 1);
+        from = startOfDay(subDays(today, 1));
+        to = endOfDay(subDays(today, 1));
         break;
       case "Last 7 Days":
-        from = subDays(today, 6);
-        to = today;
+        from = startOfDay(subDays(today, 6));
+        to = endOfDay(today);
         break;
       case "Last 30 Days":
-        from = subDays(today, 29);
-        to = today;
+        from = startOfDay(subDays(today, 29));
+        to = endOfDay(today);
         break;
       case "This Month":
-        from = startOfMonth(today);
-        to = today;
+        from = startOfDay(startOfMonth(today));
+        to = endOfDay(today);
         break;
       case "Last Month":
-        from = startOfMonth(subMonths(today, 1));
-        to = endOfMonth(subMonths(today, 1));
+        from = startOfDay(startOfMonth(subMonths(today, 1)));
+        to = endOfDay(endOfMonth(subMonths(today, 1)));
         break;
       default:
         return;

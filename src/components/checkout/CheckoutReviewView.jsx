@@ -162,11 +162,6 @@ export default function CheckoutReviewView() {
 
     const supabase = createClient();
     const uid = await resolveSupabaseUserId(supabase);
-    if (!uid) {
-      const next = `/checkout`;
-      router.push(`/login?next=${encodeURIComponent(next)}`);
-      return;
-    }
 
     setSubmitting(true);
     try {
@@ -189,39 +184,42 @@ export default function CheckoutReviewView() {
               .join("")
           : `${Date.now()}`.slice(-12);
 
-      const orderRes = await fetch("/api/account/orders", {
+      const payload = {
+        lines: items.map((line) => ({
+          slug: line.slug,
+          name: line.name,
+          image: line.image,
+          price: line.price,
+          compareAt: line.compareAt,
+          variantLabel: line.variantLabel,
+          qty: line.qty,
+        })),
+        total: grandTotal,
+        itemsCount: totalQty,
+        shippingCost,
+        discountAmount,
+        checkoutDetails: {
+          contactEmail: data.email.trim(),
+          contactPhone: data.phone.trim() || "—",
+          shippingName,
+          shippingLines,
+          billingLines,
+          billingSame: true,
+          shippingMethod: "FedEx Ground",
+          paymentDisplay: "Pending Stripe Payment",
+          expectedDeliveryLabel: format(expected, "MMM d"),
+          trackingNumber: tracking,
+          confirmedHeadline: `Confirmed ${format(new Date(), "MMM d, yyyy")}`,
+          timelineDetail: `Updated ${format(new Date(), "MMM d")}`,
+          statusMessage: "We've accepted your order, and we're getting it ready.",
+        },
+      };
+
+      const orderEndpoint = uid ? "/api/account/orders" : "/api/storefront/guest-orders";
+      const orderRes = await fetch(orderEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          lines: items.map((line) => ({
-            slug: line.slug,
-            name: line.name,
-            image: line.image,
-            price: line.price,
-            compareAt: line.compareAt,
-            variantLabel: line.variantLabel,
-            qty: line.qty,
-          })),
-          total: grandTotal,
-          itemsCount: totalQty,
-          shippingCost,
-          discountAmount,
-          checkoutDetails: {
-            contactEmail: data.email.trim(),
-            contactPhone: data.phone.trim() || "—",
-            shippingName,
-            shippingLines,
-            billingLines,
-            billingSame: true,
-            shippingMethod: "FedEx Ground",
-            paymentDisplay: "Pending Stripe Payment",
-            expectedDeliveryLabel: format(expected, "MMM d"),
-            trackingNumber: tracking,
-            confirmedHeadline: `Confirmed ${format(new Date(), "MMM d, yyyy")}`,
-            timelineDetail: `Updated ${format(new Date(), "MMM d")}`,
-            statusMessage: "We've accepted your order, and we're getting it ready.",
-          },
-        }),
+        body: JSON.stringify(payload),
       });
       const orderJson = await orderRes.json();
       if (!orderRes.ok || !orderJson.success || !orderJson.data?.id) {

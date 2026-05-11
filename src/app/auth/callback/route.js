@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
+import { createClient, createAdminClient } from "@/utils/supabase/server";
 import { canAccessDashboard } from "@/lib/auth/roles";
+import { linkGuestOrdersToUserByEmail } from "@/lib/account/linkGuestOrdersByEmail";
 
 const DEFAULT_POST_AUTH = "/account/orders";
 
@@ -54,6 +55,18 @@ export async function GET(request) {
   } = await supabase.auth.getUser();
 
   if (user) {
+    if (user.email && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      try {
+        const admin = await createAdminClient();
+        const { linked } = await linkGuestOrdersToUserByEmail(admin, user.id, user.email);
+        if (linked > 0) {
+          console.log(`[/auth/callback] linked ${linked} guest order(s) → ${user.id}`);
+        }
+      } catch (e) {
+        console.error("[/auth/callback] linkGuestOrdersToUserByEmail", e);
+      }
+    }
+
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")

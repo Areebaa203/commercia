@@ -3,17 +3,65 @@ import React, { useEffect, useState } from "react";
 import { Icon } from "@iconify/react";
 import { clsx } from "clsx";
 
-const AddCustomerModal = ({ isOpen, onClose }) => {
+const AddCustomerModal = ({ isOpen, onClose, onSuccess }) => {
   const [isVisible, setIsVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    location: "",
+    status: "active"
+  });
 
   useEffect(() => {
     if (isOpen) {
       setIsVisible(true);
     } else {
-      const timer = setTimeout(() => setIsVisible(false), 300);
+      const timer = setTimeout(() => {
+        setIsVisible(false);
+        setFormData({
+            name: "",
+            email: "",
+            phone: "",
+            location: "",
+            status: "active"
+        });
+      }, 300);
       return () => clearTimeout(timer);
     }
   }, [isOpen]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.name) return;
+
+    try {
+      setLoading(true);
+      const res = await fetch("/api/dashboard/customers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+      const json = await res.json();
+      if (json.success) {
+        onSuccess?.();
+        onClose();
+      } else {
+        alert(json.message || "Failed to add customer");
+      }
+    } catch (err) {
+      console.error("Error adding customer:", err);
+      alert("An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
 
   if (!isVisible && !isOpen) return null;
 
@@ -40,18 +88,23 @@ const AddCustomerModal = ({ isOpen, onClose }) => {
           <h3 className="text-lg font-bold text-gray-900">Add New Customer</h3>
           <button 
             onClick={onClose}
-            className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+            disabled={loading}
+            className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors disabled:opacity-50"
           >
             <Icon icon="mingcute:close-line" width="20" />
           </button>
         </div>
 
         {/* Form */}
-        <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+        <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="space-y-1.5">
                 <label className="text-xs font-medium text-gray-700">Full Name</label>
                 <input 
                     type="text" 
+                    name="name"
+                    required
+                    value={formData.name}
+                    onChange={handleChange}
                     placeholder="e.g. John Doe"
                     className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
                 />
@@ -62,6 +115,9 @@ const AddCustomerModal = ({ isOpen, onClose }) => {
                     <label className="text-xs font-medium text-gray-700">Email Address</label>
                     <input 
                         type="email" 
+                        name="email"
+                        value={formData.email}
+                        onChange={handleChange}
                         placeholder="john@example.com"
                         className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
                     />
@@ -70,6 +126,9 @@ const AddCustomerModal = ({ isOpen, onClose }) => {
                     <label className="text-xs font-medium text-gray-700">Phone Number</label>
                     <input 
                         type="tel" 
+                        name="phone"
+                        value={formData.phone}
+                        onChange={handleChange}
                         placeholder="+1 (555) 000-0000"
                         className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
                     />
@@ -77,9 +136,12 @@ const AddCustomerModal = ({ isOpen, onClose }) => {
             </div>
 
             <div className="space-y-1.5">
-                <label className="text-xs font-medium text-gray-700">Address</label>
+                <label className="text-xs font-medium text-gray-700">Address (Location)</label>
                 <textarea 
                     rows="3"
+                    name="location"
+                    value={formData.location}
+                    onChange={handleChange}
                     placeholder="123 Main St, City, Country"
                     className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400 resize-none"
                 ></textarea>
@@ -88,10 +150,17 @@ const AddCustomerModal = ({ isOpen, onClose }) => {
             <div className="space-y-1.5">
                 <label className="text-xs font-medium text-gray-700">Status</label>
                 <div className="flex gap-3">
-                    {["Active", "Blocked"].map((status) => (
-                        <label key={status} className="flex items-center gap-2 cursor-pointer">
-                            <input type="radio" name="status" className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300" />
-                            <span className="text-sm text-gray-600">{status}</span>
+                    {["active", "blocked"].map((s) => (
+                        <label key={s} className="flex items-center gap-2 cursor-pointer">
+                            <input 
+                                type="radio" 
+                                name="status" 
+                                value={s}
+                                checked={formData.status === s}
+                                onChange={handleChange}
+                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300" 
+                            />
+                            <span className="text-sm text-gray-600 capitalize">{s}</span>
                         </label>
                     ))}
                 </div>
@@ -101,14 +170,17 @@ const AddCustomerModal = ({ isOpen, onClose }) => {
                 <button 
                     type="button"
                     onClick={onClose}
-                    className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                    disabled={loading}
+                    className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
                 >
                     Cancel
                 </button>
                 <button 
                     type="submit"
-                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors shadow-sm"
+                    disabled={loading || !formData.name}
+                    className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50"
                 >
+                    {loading && <Icon icon="line-md:loading-twotone-loop" width="18" />}
                     Add Customer
                 </button>
             </div>

@@ -311,6 +311,24 @@ export default function CheckoutView() {
   const [appliedDiscount, setAppliedDiscount] = React.useState(null);
 
   const [saveShopAccount, setSaveShopAccount] = React.useState(false);
+  const [user, setUser] = React.useState(null);
+  const [formData, setFormData] = React.useState({
+    email: "",
+    firstName: "",
+    lastName: "",
+    address: "",
+    apartment: "",
+    city: "",
+    state: "CA",
+    zipCode: "",
+    phone: "",
+    country: "US"
+  });
+
+  const handleFormChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
 
   const discountAmount = appliedDiscount?.amount ?? 0;
   const appliedDiscountLabel = appliedDiscount?.label ?? null;
@@ -325,6 +343,68 @@ export default function CheckoutView() {
 
   React.useEffect(() => {
     setMounted(true);
+    (async () => {
+      const supabase = createClient();
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser) {
+        setUser(authUser);
+        setFormData(prev => ({ ...prev, email: authUser.email }));
+        
+        try {
+          // Fetch profile first for name/phone fallback
+          const profileRes = await fetch("/api/settings/profile");
+          const profileJson = await profileRes.json();
+          if (profileJson.success && profileJson.data) {
+            const p = profileJson.data;
+            const names = (p.full_name || "").split(" ");
+            setFormData(prev => ({
+              ...prev,
+              firstName: names[0] || "",
+              lastName: names.slice(1).join(" ") || "",
+              phone: p.phone || prev.phone
+            }));
+          }
+
+          const res = await fetch("/api/account/addresses");
+          const json = await res.json();
+          if (json.success && json.data && json.data.length > 0) {
+            const def = json.data.find(a => a.is_default) || json.data[0];
+            setFormData({
+              email: authUser.email,
+              firstName: def.first_name || "",
+              lastName: def.last_name || "",
+              address: def.address || "",
+              apartment: def.apartment || "",
+              city: def.city || "",
+              state: def.state || "CA",
+              zipCode: def.zip_code || "",
+              phone: def.phone || "",
+              country: def.country || "US"
+            });
+          } else {
+            // Fallback to profile data if no addresses are saved
+            try {
+              const profRes = await fetch("/api/settings/profile");
+              const profJson = await profRes.json();
+              if (profJson.success && profJson.data) {
+                const fullName = profJson.data.full_name || "";
+                const nameParts = fullName.split(" ");
+                setFormData(prev => ({
+                  ...prev,
+                  firstName: nameParts[0] || "",
+                  lastName: nameParts.slice(1).join(" ") || "",
+                  phone: profJson.data.phone || ""
+                }));
+              }
+            } catch (err) {
+              console.error("Error fetching profile fallback:", err);
+            }
+          }
+        } catch (err) {
+          console.error("Error fetching addresses:", err);
+        }
+      }
+    })();
   }, []);
 
   const grandTotal = Math.max(0, subtotal + shippingCost + taxAmount - discountAmount);
@@ -462,12 +542,20 @@ export default function CheckoutView() {
 
           {/* Contact */}
           <section className="mt-10 border-t border-[#eceae5] pt-10">
-            <SectionTitle aside={<Link href="/login" className="font-home-body text-sm text-neutral-600 underline underline-offset-2 hover:text-[#1a3021]">Sign in</Link>}>
+            <SectionTitle aside={!user && <Link href="/login" className="font-home-body text-sm text-neutral-600 underline underline-offset-2 hover:text-[#1a3021]">Sign in</Link>}>
               Contact
             </SectionTitle>
             <label className="block">
               <span className="sr-only">Email</span>
-              <input type="email" autoComplete="email" placeholder="Email" className={inputClass} />
+              <input 
+                type="email" 
+                name="email"
+                autoComplete="email" 
+                placeholder="Email" 
+                className={inputClass} 
+                value={formData.email}
+                onChange={handleFormChange}
+              />
             </label>
             <label className="mt-4 flex cursor-pointer items-start gap-3 font-home-body text-sm text-neutral-700">
               <input type="checkbox" className="mt-1 size-4 rounded border-neutral-300 accent-[#2D3E33]" defaultChecked />
@@ -541,7 +629,12 @@ export default function CheckoutView() {
                   <span className="mb-1.5 block font-home-body text-xs font-medium text-neutral-600">
                     Country / Region
                   </span>
-                  <select className={cn(inputClass, "appearance-none")} defaultValue="US">
+                  <select 
+                    name="country"
+                    className={cn(inputClass, "appearance-none")} 
+                    value={formData.country}
+                    onChange={handleFormChange}
+                  >
                     <option value="US">United States</option>
                     <option value="CA">Canada</option>
                   </select>
@@ -549,11 +642,25 @@ export default function CheckoutView() {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="block">
                     <span className="mb-1.5 block font-home-body text-xs font-medium text-neutral-600">First name</span>
-                    <input type="text" autoComplete="given-name" className={inputClass} />
+                    <input 
+                      type="text" 
+                      name="firstName"
+                      autoComplete="given-name" 
+                      className={inputClass} 
+                      value={formData.firstName}
+                      onChange={handleFormChange}
+                    />
                   </label>
                   <label className="block">
                     <span className="mb-1.5 block font-home-body text-xs font-medium text-neutral-600">Last name</span>
-                    <input type="text" autoComplete="family-name" className={inputClass} />
+                    <input 
+                      type="text" 
+                      name="lastName"
+                      autoComplete="family-name" 
+                      className={inputClass} 
+                      value={formData.lastName}
+                      onChange={handleFormChange}
+                    />
                   </label>
                 </div>
                 <label className="block">
@@ -564,23 +671,49 @@ export default function CheckoutView() {
                       className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-neutral-400"
                       aria-hidden
                     />
-                    <input type="text" autoComplete="street-address" className={cn(inputClass, "pl-11")} placeholder="Street address" />
+                    <input 
+                      type="text" 
+                      name="address"
+                      autoComplete="street-address" 
+                      className={cn(inputClass, "pl-11")} 
+                      placeholder="Street address" 
+                      value={formData.address}
+                      onChange={handleFormChange}
+                    />
                   </span>
                 </label>
                 <label className="block">
                   <span className="mb-1.5 block font-home-body text-xs font-medium text-neutral-600">
                     Apartment, suite, etc. (optional)
                   </span>
-                  <input type="text" className={inputClass} />
+                  <input 
+                    type="text" 
+                    name="apartment"
+                    className={inputClass} 
+                    value={formData.apartment}
+                    onChange={handleFormChange}
+                  />
                 </label>
                 <div className="grid gap-4 sm:grid-cols-3">
                   <label className="block sm:col-span-1">
                     <span className="mb-1.5 block font-home-body text-xs font-medium text-neutral-600">City</span>
-                    <input type="text" autoComplete="address-level2" className={inputClass} />
+                    <input 
+                      type="text" 
+                      name="city"
+                      autoComplete="address-level2" 
+                      className={inputClass} 
+                      value={formData.city}
+                      onChange={handleFormChange}
+                    />
                   </label>
                   <label className="block">
                     <span className="mb-1.5 block font-home-body text-xs font-medium text-neutral-600">State</span>
-                    <select className={inputClass} defaultValue="CA">
+                    <select 
+                      name="state"
+                      className={inputClass} 
+                      value={formData.state}
+                      onChange={handleFormChange}
+                    >
                       <option value="CA">California</option>
                       <option value="NY">New York</option>
                       <option value="TX">Texas</option>
@@ -588,13 +721,27 @@ export default function CheckoutView() {
                   </label>
                   <label className="block">
                     <span className="mb-1.5 block font-home-body text-xs font-medium text-neutral-600">ZIP code</span>
-                    <input type="text" autoComplete="postal-code" className={inputClass} />
+                    <input 
+                      type="text" 
+                      name="zipCode"
+                      autoComplete="postal-code" 
+                      className={inputClass} 
+                      value={formData.zipCode}
+                      onChange={handleFormChange}
+                    />
                   </label>
                 </div>
                 <label className="block">
                   <span className="mb-1.5 block font-home-body text-xs font-medium text-neutral-600">Phone number</span>
                   <div className="relative">
-                    <input type="tel" autoComplete="tel" className={cn(inputClass, "pr-11")} />
+                    <input 
+                      type="tel" 
+                      name="phone"
+                      autoComplete="tel" 
+                      className={cn(inputClass, "pr-11")} 
+                      value={formData.phone}
+                      onChange={handleFormChange}
+                    />
                     <Popover>
                       <PopoverTrigger asChild>
                         <button

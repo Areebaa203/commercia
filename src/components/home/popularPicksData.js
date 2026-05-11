@@ -1,8 +1,8 @@
 export const CATEGORIES = [
-  { id: "living", label: "Living room" },
-  { id: "bedroom", label: "Bedroom" },
-  { id: "bathroom", label: "Bathroom" },
-  { id: "dining", label: "Dining" },
+  { id: "Living Room", label: "Living room" },
+  { id: "Bedroom", label: "Bedroom" },
+  { id: "Bathroom", label: "Bathroom" },
+  { id: "Office", label: "Office" },
 ];
 
 export const PRODUCTS = [

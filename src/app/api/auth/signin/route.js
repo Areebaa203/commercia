@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
+import { createClient, createAdminClient } from "@/utils/supabase/server";
 import { signInSchema } from "@/lib/validations/auth";
 import { postAuthPathForRole } from "@/lib/auth/roles";
+import { linkGuestOrdersToUserByEmail } from "@/lib/account/linkGuestOrdersByEmail";
 
 /**
  * POST /api/auth/signin
@@ -65,6 +66,22 @@ export async function POST(request) {
       .select("role")
       .eq("id", data.user.id)
       .maybeSingle();
+
+    if (data.user?.id && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      try {
+        const admin = await createAdminClient();
+        const { linked } = await linkGuestOrdersToUserByEmail(
+          admin,
+          data.user.id,
+          data.user.email ?? email
+        );
+        if (linked > 0) {
+          console.log(`[/api/auth/signin] linked ${linked} guest order(s) → ${data.user.id}`);
+        }
+      } catch (linkErr) {
+        console.error("[/api/auth/signin] linkGuestOrdersToUserByEmail", linkErr);
+      }
+    }
 
     const redirectTo = postAuthPathForRole(profile?.role ?? "user");
 

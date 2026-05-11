@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
+import { createClient, createAdminClient } from "@/utils/supabase/server";
 import { signUpSchema } from "@/lib/validations/auth";
 import { authRedirectUrl } from "@/utils/site-url";
+import { linkGuestOrdersToUserByEmail } from "@/lib/account/linkGuestOrdersByEmail";
 
 /**
  * POST /api/auth/signup
@@ -51,6 +52,19 @@ export async function POST(request) {
         { success: false, message: error.message },
         { status: 400 }
       );
+    }
+
+    const newUserId = data.user?.id;
+    if (newUserId && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      try {
+        const admin = await createAdminClient();
+        const { linked } = await linkGuestOrdersToUserByEmail(admin, newUserId, email);
+        if (linked > 0) {
+          console.log(`[/api/auth/signup] linked ${linked} guest order(s) → ${newUserId}`);
+        }
+      } catch (linkErr) {
+        console.error("[/api/auth/signup] linkGuestOrdersToUserByEmail", linkErr);
+      }
     }
 
     return NextResponse.json(

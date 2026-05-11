@@ -3,17 +3,63 @@ import React, { useEffect, useState } from "react";
 import { Icon } from "@iconify/react";
 import { clsx } from "clsx";
 
-const EditCustomerModal = ({ isOpen, onClose, customer }) => {
+const EditCustomerModal = ({ isOpen, onClose, customer, onSuccess }) => {
   const [isVisible, setIsVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    location: "",
+    status: "active"
+  });
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && customer) {
       setIsVisible(true);
+      setFormData({
+        name: customer.name || "",
+        email: customer.email || "",
+        phone: customer.phone || "",
+        location: customer.location || "",
+        status: customer.status?.toLowerCase() || "active"
+      });
     } else {
       const timer = setTimeout(() => setIsVisible(false), 300);
       return () => clearTimeout(timer);
     }
-  }, [isOpen]);
+  }, [isOpen, customer]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.name) return;
+
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/dashboard/customers/${customer.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+      const json = await res.json();
+      if (json.success) {
+        onSuccess?.();
+        onClose();
+      } else {
+        alert(json.message || "Failed to update customer");
+      }
+    } catch (err) {
+      console.error("Error updating customer:", err);
+      alert("An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
 
   if (!isVisible && !isOpen) return null;
 
@@ -40,7 +86,8 @@ const EditCustomerModal = ({ isOpen, onClose, customer }) => {
           <h3 className="text-lg font-bold text-gray-900">Edit Customer</h3>
           <button 
             onClick={onClose}
-            className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+            disabled={loading}
+            className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors disabled:opacity-50"
           >
             <Icon icon="mingcute:close-line" width="20" />
           </button>
@@ -48,12 +95,15 @@ const EditCustomerModal = ({ isOpen, onClose, customer }) => {
 
         {/* Form */}
         {customer && (
-            <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+            <form className="space-y-4" onSubmit={handleSubmit}>
                 <div className="space-y-1.5">
                     <label className="text-xs font-medium text-gray-700">Full Name</label>
                     <input 
                         type="text" 
-                        defaultValue={customer.name}
+                        name="name"
+                        required
+                        value={formData.name}
+                        onChange={handleChange}
                         className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
                     />
                 </div>
@@ -63,7 +113,9 @@ const EditCustomerModal = ({ isOpen, onClose, customer }) => {
                         <label className="text-xs font-medium text-gray-700">Email Address</label>
                         <input 
                             type="email" 
-                            defaultValue={customer.email}
+                            name="email"
+                            value={formData.email}
+                            onChange={handleChange}
                             className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
                         />
                     </div>
@@ -71,17 +123,21 @@ const EditCustomerModal = ({ isOpen, onClose, customer }) => {
                         <label className="text-xs font-medium text-gray-700">Phone Number</label>
                         <input 
                             type="tel" 
-                            defaultValue={customer.phone}
+                            name="phone"
+                            value={formData.phone}
+                            onChange={handleChange}
                             className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
                         />
                     </div>
                 </div>
 
                 <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-gray-700">Address</label>
+                    <label className="text-xs font-medium text-gray-700">Address (Location)</label>
                     <textarea 
                         rows="3"
-                        defaultValue={customer.location}
+                        name="location"
+                        value={formData.location}
+                        onChange={handleChange}
                         className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400 resize-none"
                     ></textarea>
                 </div>
@@ -89,11 +145,13 @@ const EditCustomerModal = ({ isOpen, onClose, customer }) => {
                 <div className="space-y-1.5">
                     <label className="text-xs font-medium text-gray-700">Status</label>
                     <select 
-                        defaultValue={customer.status}
+                        name="status"
+                        value={formData.status}
+                        onChange={handleChange}
                         className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
                     >
-                        <option value="Active">Active</option>
-                        <option value="Blocked">Blocked</option>
+                        <option value="active">Active</option>
+                        <option value="blocked">Blocked</option>
                     </select>
                 </div>
 
@@ -101,14 +159,17 @@ const EditCustomerModal = ({ isOpen, onClose, customer }) => {
                     <button 
                         type="button"
                         onClick={onClose}
-                        className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                        disabled={loading}
+                        className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
                     >
                         Cancel
                     </button>
                     <button 
                         type="submit"
-                        className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors shadow-sm"
+                        disabled={loading || !formData.name}
+                        className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50"
                     >
+                        {loading && <Icon icon="line-md:loading-twotone-loop" width="18" />}
                         Save Changes
                     </button>
                 </div>
