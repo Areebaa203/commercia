@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { useCart } from "@/contexts/CartContext";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { createClient } from "@/utils/supabase/client";
-import { resolveSupabaseUserId } from "@/utils/supabase/resolveUserId";
+import { resolveSupabaseBrowserUser, resolveSupabaseUserId } from "@/utils/supabase/resolveUserId";
 
 const BG_PAGE = "#F9F7F2";
 const BG_SUMMARY = "#f0ebe3";
@@ -345,63 +345,59 @@ export default function CheckoutView() {
     setMounted(true);
     (async () => {
       const supabase = createClient();
-      const { data: { user: authUser } } = await supabase.auth.getUser();
+      const fetchOpts = { credentials: "same-origin" };
+      const authUser = await resolveSupabaseBrowserUser(supabase);
       if (authUser) {
         setUser(authUser);
-        setFormData(prev => ({ ...prev, email: authUser.email }));
-        
+        const email = authUser.email || "";
+
         try {
-          // Fetch profile first for name/phone fallback
-          const profileRes = await fetch("/api/settings/profile");
+          const [profileRes, addrRes] = await Promise.all([
+            fetch("/api/settings/profile", fetchOpts),
+            fetch("/api/account/addresses", fetchOpts),
+          ]);
           const profileJson = await profileRes.json();
+          const addrJson = await addrRes.json();
+
+          let firstName = "";
+          let lastName = "";
+          let phone = "";
           if (profileJson.success && profileJson.data) {
             const p = profileJson.data;
-            const names = (p.full_name || "").split(" ");
-            setFormData(prev => ({
-              ...prev,
-              firstName: names[0] || "",
-              lastName: names.slice(1).join(" ") || "",
-              phone: p.phone || prev.phone
-            }));
+            const raw = (p.full_name || "").trim();
+            const parts = raw ? raw.split(/\s+/) : [];
+            firstName = parts[0] || "";
+            lastName = parts.slice(1).join(" ") || "";
+            phone = (p.phone || "").trim();
           }
 
-          const res = await fetch("/api/account/addresses");
-          const json = await res.json();
-          if (json.success && json.data && json.data.length > 0) {
-            const def = json.data.find(a => a.is_default) || json.data[0];
+          const rows = addrJson.success && Array.isArray(addrJson.data) ? addrJson.data : [];
+          if (rows.length > 0) {
+            const def = rows.find((a) => a.is_default) || rows[0];
             setFormData({
-              email: authUser.email,
-              firstName: def.first_name || "",
-              lastName: def.last_name || "",
-              address: def.address || "",
-              apartment: def.apartment || "",
-              city: def.city || "",
+              email,
+              firstName: (def.first_name || "").trim() || firstName,
+              lastName: (def.last_name || "").trim() || lastName,
+              address: (def.address || "").trim(),
+              apartment: (def.apartment || "").trim(),
+              city: (def.city || "").trim(),
               state: def.state || "CA",
-              zipCode: def.zip_code || "",
-              phone: def.phone || "",
-              country: def.country || "US"
+              zipCode: (def.zip_code || "").trim(),
+              phone: (def.phone || "").trim() || phone,
+              country: def.country || "US",
             });
           } else {
-            // Fallback to profile data if no addresses are saved
-            try {
-              const profRes = await fetch("/api/settings/profile");
-              const profJson = await profRes.json();
-              if (profJson.success && profJson.data) {
-                const fullName = profJson.data.full_name || "";
-                const nameParts = fullName.split(" ");
-                setFormData(prev => ({
-                  ...prev,
-                  firstName: nameParts[0] || "",
-                  lastName: nameParts.slice(1).join(" ") || "",
-                  phone: profJson.data.phone || ""
-                }));
-              }
-            } catch (err) {
-              console.error("Error fetching profile fallback:", err);
-            }
+            setFormData((prev) => ({
+              ...prev,
+              email,
+              firstName,
+              lastName,
+              phone,
+            }));
           }
         } catch (err) {
-          console.error("Error fetching addresses:", err);
+          console.error("Error fetching profile/addresses:", err);
+          setFormData((prev) => ({ ...prev, email }));
         }
       }
     })();

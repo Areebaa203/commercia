@@ -12,7 +12,8 @@ import * as z from "zod";
 import { cn } from "@/lib/utils";
 import { useCart, FREE_SHIPPING_THRESHOLD } from "@/contexts/CartContext";
 import { createClient } from "@/utils/supabase/client";
-import { resolveSupabaseUserId } from "@/utils/supabase/resolveUserId";
+import { shouldUseStripeHostedCheckout } from "@/lib/checkout/stripeHostedCheckout";
+import { resolveSupabaseBrowserUser, resolveSupabaseUserId } from "@/utils/supabase/resolveUserId";
 
 const BG_PAGE = "#F9F7F2";
 const FOREST = "#2D3E33";
@@ -99,6 +100,30 @@ function OrderSummaryPanel({ items, subtotal, shippingCost, discountAmount, tota
   );
 }
 
+const CHECKOUT_FORM_DEFAULTS = {
+  email: "",
+  phone: "",
+  firstName: "",
+  lastName: "",
+  address1: "",
+  address2: "",
+  city: "",
+  region: "",
+  zip: "",
+  country: "Canada",
+};
+
+/** Normalize DB / modal country strings to checkout select values */
+function mapStoredCountryToCheckout(stored) {
+  const s = String(stored ?? "").trim();
+  if (!s) return CHECKOUT_FORM_DEFAULTS.country;
+  const u = s.toUpperCase();
+  if (u === "US" || u === "USA" || u === "UNITED STATES") return "United States";
+  if (u === "CA" || u === "CAN") return "Canada";
+  if (s === "United States" || s === "Canada") return s;
+  return CHECKOUT_FORM_DEFAULTS.country;
+}
+
 function PolicyLinks() {
   return (
     <nav className="flex flex-wrap justify-center gap-x-6 gap-y-2 font-home-body text-[11px] text-neutral-500">
@@ -128,26 +153,97 @@ export default function CheckoutReviewView() {
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(checkoutSchema),
-    defaultValues: {
-      email: "",
-      phone: "",
-      firstName: "",
-      lastName: "",
-      address1: "",
-      address2: "",
-      city: "",
-      region: "",
-      zip: "",
-      country: "Canada",
-    },
+    defaultValues: CHECKOUT_FORM_DEFAULTS,
   });
 
   React.useEffect(() => {
-    setMounted(true);
-  }, []);
+    const supabase = createClient();
+    let cancelled = false;
+
+    const fetchOpts = { credentials: "same-origin" };
+
+    async function applyPrefill(user) {
+      try {
+        const [profileRes, addrRes] = await Promise.all([
+          fetch("/api/settings/profile", fetchOpts),
+          fetch("/api/account/addresses", fetchOpts),
+        ]);
+        const profileJson = await profileRes.json().catch(() => ({}));
+        const addrJson = await addrRes.json().catch(() => ({}));
+
+        const next = {
+          ...CHECKOUT_FORM_DEFAULTS,
+          email: user.email?.trim() || "",
+          phone: "",
+          firstName: "",
+          lastName: "",
+          address1: "",
+          address2: "",
+          city: "",
+          region: "",
+          zip: "",
+          country: CHECKOUT_FORM_DEFAULTS.country,
+        };
+
+        if (profileJson.success && profileJson.data) {
+          const p = profileJson.data;
+          const rawName = (p.full_name || "").trim();
+          const parts = rawName ? rawName.split(/\s+/) : [];
+          next.firstName = parts[0] || "";
+          next.lastName = parts.slice(1).join(" ") || "";
+          next.phone = (p.phone || "").trim();
+          if (!next.email && p.email) next.email = String(p.email).trim();
+        }
+
+        const addrs = addrJson.success && Array.isArray(addrJson.data) ? addrJson.data : [];
+        if (addrs.length > 0) {
+          const def = addrs.find((a) => a.is_default) || addrs[0];
+          next.firstName = (def.first_name || "").trim() || next.firstName;
+          next.lastName = (def.last_name || "").trim() || next.lastName;
+          next.address1 = (def.address || "").trim() || next.address1;
+          next.address2 = (def.apartment || "").trim() || next.address2;
+          next.city = (def.city || "").trim() || next.city;
+          next.region = (def.state || "").trim() || next.region;
+          next.zip = (def.zip_code || "").trim() || next.zip;
+          next.country = mapStoredCountryToCheckout(def.country);
+          next.phone = (def.phone || "").trim() || next.phone;
+        }
+
+        reset(next);
+      } catch (e) {
+        console.error("[CheckoutReviewView] profile prefill", e);
+        reset({
+          ...CHECKOUT_FORM_DEFAULTS,
+          email: user.email?.trim() || "",
+        });
+      }
+    }
+
+    (async () => {
+      const user = await resolveSupabaseBrowserUser(supabase);
+      if (cancelled) return;
+      if (user) await applyPrefill(user);
+      if (!cancelled) setMounted(true);
+    })();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (cancelled) return;
+      const u = session?.user ?? null;
+      if (u) void applyPrefill(u);
+      else reset(CHECKOUT_FORM_DEFAULTS);
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+  }, [reset]);
 
   const shippingCost = React.useMemo(() => {
     if (items.length === 0) return 0;
@@ -226,6 +322,13 @@ export default function CheckoutReviewView() {
         throw new Error(orderJson.message || "Could not save your order");
       }
       const order = orderJson.data;
+
+      /** Production (Vercel): signed-in buyers confirm in-app; guests still need Stripe + session_id on the confirmation page. */
+      if (!shouldUseStripeHostedCheckout() && uid) {
+        clearCart();
+        router.push(`/checkout/confirmation?orderId=${encodeURIComponent(order.id)}`);
+        return;
+      }
 
       // Call API to create Stripe Checkout Session
       const res = await fetch("/api/checkout/create-checkout-session", {
