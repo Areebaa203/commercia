@@ -4,7 +4,7 @@ import { createClient } from "@/utils/supabase/server";
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
-    
+
     // Extract query parameters
     const page = parseInt(searchParams.get("page") || "1");
     const pageSize = parseInt(searchParams.get("pageSize") || "12");

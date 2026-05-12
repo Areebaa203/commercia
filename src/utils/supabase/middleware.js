@@ -80,6 +80,8 @@ export async function updateSession(request) {
     pathname === "/products" ||
     pathname.startsWith("/products/") ||
     pathname.startsWith("/api/auth") ||
+    // Catalog + guest checkout: routes enforce their own rules (e.g. Stripe on confirmation)
+    pathname.startsWith("/api/storefront/") ||
     // Stripe (and other providers) call webhooks without a user session; do not redirect them to login
     pathname.startsWith("/api/webhook") ||
     pathname.startsWith("/_next") ||
