@@ -314,7 +314,7 @@ export default function ProductDetailView({ product }) {
                     disabled={qty <= 1}
                     onClick={() => setQty((q) => Math.max(1, q - 1))}
                   >
-                    <Icon icon="mingcute:subtract-fill" className="size-5" />
+                    <Icon icon="mingcute:minimize-line" className="size-5" />
                   </button>
                   <span className="tabular-nums">{qty}</span>
                   <button
@@ -662,7 +662,7 @@ function ProductWhyLoveIt({ lifestyleSrc }) {
                     >
                       <span>{f.title}</span>
                       <Icon
-                        icon={open ? "mingcute:subtract-line" : "mingcute:add-line"}
+                        icon={open ? "mingcute:minimize-line" : "mingcute:add-line"}
                         className="size-5 shrink-0 text-neutral-500"
                       />
                     </button>
@@ -697,7 +697,7 @@ function AccordionRow({ title, open, onToggle, children }) {
         aria-expanded={open}
       >
         {title}
-        <Icon icon={open ? "mingcute:subtract-line" : "mingcute:add-line"} className="size-5 text-neutral-500" />
+        <Icon icon={open ? "mingcute:minimize-line" : "mingcute:add-line"} className="size-5 text-neutral-500" />
       </button>
       {open ? <div className="mt-4">{children}</div> : null}
     </div>

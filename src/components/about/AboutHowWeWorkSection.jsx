@@ -82,7 +82,7 @@ export default function AboutHowWeWorkSection() {
                         </span>
                         <span className="shrink-0 text-[#6b6b6b]" aria-hidden>
                           <Icon
-                            icon={isOpen ? "mingcute:subtract-line" : "mingcute:add-line"}
+                            icon={isOpen ? "mingcute:minimize-line" : "mingcute:add-line"}
                             className="size-5 sm:size-[1.35rem]"
                           />
                         </span>

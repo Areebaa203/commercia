@@ -202,7 +202,7 @@ export default function CartDrawer() {
                             aria-label="Decrease quantity"
                             onClick={() => updateQty(line.lineId, line.qty - 1)}
                           >
-                            <Icon icon="mingcute:subtract-fill" className="size-4" />
+                            <Icon icon="mingcute:minimize-line" className="size-4" />
                           </button>
                           <span className="min-w-[2rem] text-center font-home-body text-sm tabular-nums">{line.qty}</span>
                           <button

@@ -113,7 +113,7 @@ export default function AboutFaqSection() {
                       </span>
                       <span className="shrink-0 text-[#5c5c5c]" aria-hidden>
                         <Icon
-                          icon={isOpen ? "mingcute:subtract-line" : "mingcute:add-line"}
+                          icon={isOpen ? "mingcute:minimize-line" : "mingcute:add-line"}
                           className="size-5 sm:size-[1.35rem]"
                         />
                       </span>

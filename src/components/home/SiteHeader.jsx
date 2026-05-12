@@ -429,7 +429,7 @@ export default function SiteHeader() {
                             {group.title}
                           </span>
                           <Icon
-                            icon="mingcute:subtract-line"
+                            icon="mingcute:minimize-line"
                             className="size-5 shrink-0 text-[#333333]"
                             aria-hidden
                           />

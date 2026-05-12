@@ -1,16 +1,12 @@
 /**
  * Whether the storefront should send buyers through Stripe Hosted Checkout after placing an order.
  *
- * - Vercel Production: skip hosted checkout → in-app `/checkout/confirmation` (logged-in buyers).
- * - Local dev, Preview, and other environments: keep Stripe for testing.
+ * Stripe is the default in every environment, including Vercel Production, so live
+ * orders are paid before the buyer lands on `/checkout/confirmation`.
  *
- * Set `NEXT_PUBLIC_FORCE_STRIPE_CHECKOUT=true` on Vercel Production to test Stripe on the live URL.
+ * Set `NEXT_PUBLIC_DISABLE_STRIPE_CHECKOUT=true` only when you intentionally need
+ * to bypass Stripe for non-payment demos or emergency checkout troubleshooting.
  */
-
 export function shouldUseStripeHostedCheckout() {
-  if (process.env.NEXT_PUBLIC_FORCE_STRIPE_CHECKOUT === "true") return true;
-  if (process.env.NODE_ENV === "development") return true;
-  if (process.env.NEXT_PUBLIC_VERCEL_ENV === "preview") return true;
-  if (process.env.NEXT_PUBLIC_VERCEL_ENV === "production") return false;
-  return true;
+  return process.env.NEXT_PUBLIC_DISABLE_STRIPE_CHECKOUT !== "true";
 }

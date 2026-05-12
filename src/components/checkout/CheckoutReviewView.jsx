@@ -276,8 +276,8 @@ export default function CheckoutReviewView() {
       const tracking =
         typeof crypto !== "undefined" && crypto.getRandomValues
           ? Array.from(crypto.getRandomValues(new Uint8Array(8)))
-              .map((b) => b.toString(16).padStart(2, "0"))
-              .join("")
+            .map((b) => b.toString(16).padStart(2, "0"))
+            .join("")
           : `${Date.now()}`.slice(-12);
 
       const payload = {
@@ -323,7 +323,7 @@ export default function CheckoutReviewView() {
       }
       const order = orderJson.data;
 
-      /** Production (Vercel): signed-in buyers confirm in-app; guests still need Stripe + session_id on the confirmation page. */
+      /** Explicit opt-out only: normal checkout, including live production, goes through Stripe before confirmation. */
       if (!shouldUseStripeHostedCheckout() && uid) {
         clearCart();
         router.push(`/checkout/confirmation?orderId=${encodeURIComponent(order.id)}`);
@@ -334,10 +334,10 @@ export default function CheckoutReviewView() {
       const res = await fetch("/api/checkout/create-checkout-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           items,
           email: data.email.trim(),
-          orderId: order.id 
+          orderId: order.id
         }),
       });
       const { url, error: apiError } = await res.json();
