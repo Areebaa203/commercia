@@ -70,7 +70,7 @@ export function ProductCard({ product }) {
 
       <button
         type="button"
-        className="font-home-sub mt-3 w-full border border-[#d4cfc3] bg-[#f4f0ea] py-2 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#2D3E33] transition hover:bg-[#2A3E34] hover:text-white sm:mt-3.5 sm:py-2.5 sm:text-[10px]"
+        className="font-home-sub mt-auto w-full border border-[#d4cfc3] bg-[#f4f0ea] py-2 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#2D3E33] transition hover:bg-[#2A3E34] hover:text-white sm:py-2.5 sm:text-[10px]"
         style={{ borderRadius: "2px" }}
         onClick={() =>
           addItem({

@@ -53,14 +53,14 @@ export default function SearchProductCard({ product, dense = false, className })
         </p>
       </Link>
       {outOfStock ? (
-        <p className="font-home-sub mt-2 py-2 text-center text-[9px] font-semibold uppercase tracking-[0.12em] text-neutral-500">
+        <p className="font-home-sub mt-auto py-2 text-center text-[9px] font-semibold uppercase tracking-[0.12em] text-neutral-500">
           Out of stock
         </p>
       ) : (
         <button
           type="button"
           className={cn(
-            "font-home-sub mt-2 w-full border border-neutral-300/90 bg-[#f7f3ec] py-2 font-semibold uppercase tracking-[0.12em] text-neutral-800 transition hover:bg-[#ece7de]",
+            "font-home-sub mt-auto w-full border border-neutral-300/90 bg-[#f7f3ec] py-2 font-semibold uppercase tracking-[0.12em] text-neutral-800 transition hover:bg-[#ece7de]",
             dense ? "text-[9px] sm:text-[10px]" : "text-[10px] tracking-[0.14em]"
           )}
           onClick={() =>

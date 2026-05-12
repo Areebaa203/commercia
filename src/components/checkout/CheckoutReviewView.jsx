@@ -21,6 +21,19 @@ function formatMoney(n) {
   return n.toFixed(2);
 }
 
+async function readJsonResponse(response, fallbackMessage) {
+  const text = await response.text();
+  if (!text) {
+    throw new Error(fallbackMessage);
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(fallbackMessage);
+  }
+}
+
 const inputClass =
   "w-full rounded-md border border-neutral-300/90 bg-white px-3 py-2.5 font-home-body text-sm text-neutral-900 placeholder:text-neutral-400 outline-none transition focus:border-[#2D3E33] focus:ring-2 focus:ring-[#2D3E33]/15";
 
@@ -317,7 +330,7 @@ export default function CheckoutReviewView() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const orderJson = await orderRes.json();
+      const orderJson = await readJsonResponse(orderRes, "Could not save your order. Please try again.");
       if (!orderRes.ok || !orderJson.success || !orderJson.data?.id) {
         throw new Error(orderJson.message || "Could not save your order");
       }
@@ -340,9 +353,12 @@ export default function CheckoutReviewView() {
           orderId: order.id
         }),
       });
-      const { url, error: apiError } = await res.json();
+      const { url, error: apiError } = await readJsonResponse(
+        res,
+        "Could not initialize Stripe checkout. Please try again."
+      );
 
-      if (apiError || !url) {
+      if (!res.ok || apiError || !url) {
         throw new Error(apiError || "Failed to initialize payment");
       }
 

@@ -61,7 +61,7 @@ function DealProductCard({ product }) {
 
       <button
         type="button"
-        className="font-home-sub mt-3 w-full border border-[#cfccc3] bg-[#f7f3ec] py-2 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#1a1a1a] transition hover:bg-[#2A3E34] hover:text-white sm:mt-4 sm:py-2.5 sm:text-[10px]"
+        className="font-home-sub mt-auto w-full border border-[#cfccc3] bg-[#f7f3ec] py-2 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#1a1a1a] transition hover:bg-[#2A3E34] hover:text-white sm:py-2.5 sm:text-[10px]"
         style={{ borderRadius: "4px" }}
       >
         Add to cart

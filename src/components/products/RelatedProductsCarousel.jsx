@@ -155,7 +155,7 @@ export default function RelatedProductsCarousel({
                 </Link>
                 <button
                   type="button"
-                  className="font-home-sub mt-3 w-full border border-neutral-300/90 bg-[#f7f3ec] py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-800 transition hover:bg-[#ece7de]"
+                  className="font-home-sub mt-auto w-full border border-neutral-300/90 bg-[#f7f3ec] py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-800 transition hover:bg-[#ece7de]"
                   onClick={() =>
                     addItem({
                       slug: p.slug,

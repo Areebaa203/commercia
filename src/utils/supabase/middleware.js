@@ -76,6 +76,7 @@ export async function updateSession(request) {
     pathname.startsWith("/search") ||
     pathname === "/checkout" ||
     pathname.startsWith("/checkout/") ||
+    pathname.startsWith("/api/checkout/") ||
     pathname === "/shop-all" ||
     pathname === "/products" ||
     pathname.startsWith("/products/") ||

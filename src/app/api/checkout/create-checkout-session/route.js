@@ -21,6 +21,21 @@ function normalizeEmail(e) {
     .toLowerCase();
 }
 
+function resolveSiteUrl(request) {
+  const configuredUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (configuredUrl) return configuredUrl.replace(/\/+$/, "");
+
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const host = forwardedHost || request.headers.get("host");
+  if (host) {
+    const forwardedProto = request.headers.get("x-forwarded-proto");
+    const proto = forwardedProto || (host.startsWith("localhost") ? "http" : "https");
+    return `${proto}://${host}`.replace(/\/+$/, "");
+  }
+
+  return new URL(request.url).origin.replace(/\/+$/, "");
+}
+
 /**
  * POST — Stripe Checkout Session for an existing **pending-payment** order.
  * Best practice: verify order in DB, ownership (guest vs account), email, and that
@@ -130,7 +145,7 @@ export async function POST(request) {
       );
     }
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    const siteUrl = resolveSiteUrl(request);
 
     const line_items = items.map((item) => ({
       price_data: {
