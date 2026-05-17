@@ -10,7 +10,7 @@ export default function ValuePropsBand({ sectionClassName, innerClassName }) {
     <section
       className={
         sectionClassName ??
-        "border-y border-[#e8e4dc] bg-[#FAF9F6] py-6 sm:py-10 md:py-14 lg:py-16"
+        "border-y border-[#e8e4dc] bg-[#F9F4EA] py-6 sm:py-10 md:py-14 lg:py-16"
       }
     >
       <div className={cn("mx-auto max-w-7xl px-4 sm:px-6 lg:px-8", innerClassName)}>

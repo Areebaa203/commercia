@@ -151,7 +151,7 @@ export default function ProductDetailView({ product }) {
                 src={gallery[slide] ?? product.image}
                 alt={product.name}
                 fill
-                className="object-contain"
+                className="object-cover"
                 sizes="(max-width: 1024px) 100vw, 55vw"
                 priority
               />
@@ -192,7 +192,7 @@ export default function ProductDetailView({ product }) {
 
           {/* Detail column */}
           <div className="flex min-w-0 flex-col">
-            <span className="inline-block bg-[#B22222] px-2.5 py-1 font-home-sub text-[10px] font-semibold uppercase tracking-wide text-white">
+            <span className="self-start bg-[#B7211E] px-2.5 py-1 font-home-sub text-[10px] font-semibold uppercase tracking-wide text-white">
               -{product.discount}%
             </span>
             <h1 className="font-home-heading mt-4 text-3xl leading-tight text-[#1a3021] sm:text-4xl">{product.name}</h1>
@@ -561,7 +561,7 @@ function SimilarProductsNotifyCarousel({ excludeSlug }) {
                     className="object-contain p-2 sm:p-2.5"
                     sizes="200px"
                   />
-                  <span className="absolute right-2 top-2 bg-[#B22222] px-1.5 py-0.5 font-home-sub text-[9px] font-semibold uppercase tracking-wide text-white">
+                  <span className="absolute right-2 top-2 bg-[#B7211E] px-1.5 py-0.5 font-home-sub text-[9px] font-semibold uppercase tracking-wide text-white">
                     -{p.discount}%
                   </span>
                 </div>
