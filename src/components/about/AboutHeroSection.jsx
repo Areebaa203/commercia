@@ -6,6 +6,7 @@ import { SITE_HEADER_GUTTERS } from "@/components/home/SiteHeader";
 const HERO_IMG = "/about-img-1.jpg";
 
 const FEATURES = [
+  "Free shipping over $100",
   "30-day easy returns",
   "Quality materials",
   "Handcrafted furniture",
@@ -75,12 +76,12 @@ export default function AboutHeroSection() {
 
       <div className="bg-[#1a3021]">
         <div
-          className={`${SITE_HEADER_GUTTERS} py-2.5 sm:py-3`}
+          className={`${SITE_HEADER_GUTTERS} py-5 sm:py-6`}
           role="list"
           aria-label="Brand promises"
         >
           <div
-            className="-mx-4 flex gap-x-6 gap-y-2 overflow-x-auto px-4 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:gap-x-8 sm:overflow-visible sm:px-0 sm:pb-0 lg:flex-wrap lg:justify-center lg:gap-x-10 [&::-webkit-scrollbar]:hidden"
+            className="-mx-4 flex gap-x-6 overflow-x-auto px-4 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:gap-x-8 sm:px-0 sm:pb-0 lg:gap-x-10 [&::-webkit-scrollbar]:hidden"
           >
             {FEATURES.map((label) => (
               <div
@@ -89,7 +90,7 @@ export default function AboutHeroSection() {
                 className="flex shrink-0 items-center gap-2 whitespace-nowrap last:pr-2 sm:last:pr-0"
               >
                 <Icon
-                  icon="mingcute:check-circle-fill"
+                  icon="mingcute:check-line"
                   className="size-3.5 shrink-0 text-white/90 sm:size-4"
                   aria-hidden
                 />
